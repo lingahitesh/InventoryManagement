@@ -1,0 +1,103 @@
+.cd-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(3px);
+}
+
+.cd-box {
+    background: white;
+    border-radius: 16px;
+    padding: 36px 32px 28px;
+    width: 380px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+    animation: cd-pop 0.18s ease;
+}
+
+@keyframes cd-pop {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+/* Icon circle */
+.cd-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 18px;
+}
+
+.cd-icon--danger  { background: #ffebee; }
+.cd-icon--warning { background: #fff8e1; }
+.cd-icon--success { background: #e8f5e9; }
+
+/* Top border accent */
+.cd-box--danger  { border-top: 4px solid #e53935; }
+.cd-box--warning { border-top: 4px solid #f9a825; }
+.cd-box--success { border-top: 4px solid #43a047; }
+
+.cd-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 10px;
+}
+
+.cd-message {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 26px;
+}
+
+.cd-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.cd-btn {
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+/* Confirm variants */
+.cd-btn--confirm.cd-btn--danger {
+    background: #e53935;
+    color: white;
+}
+.cd-btn--confirm.cd-btn--danger:hover  { background: #c62828; }
+
+.cd-btn--confirm.cd-btn--warning {
+    background: #f9a825;
+    color: white;
+}
+.cd-btn--confirm.cd-btn--warning:hover { background: #f57f17; }
+
+.cd-btn--confirm.cd-btn--success {
+    background: #43a047;
+    color: white;
+}
+.cd-btn--confirm.cd-btn--success:hover { background: #2e7d32; }
+
+/* Cancel always neutral */
+.cd-btn--cancel {
+    background: #f5f5f5;
+    color: #444;
+}
+.cd-btn--cancel:hover { background: #e0e0e0; }

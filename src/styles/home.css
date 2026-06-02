@@ -1,0 +1,12 @@
+/* Home page overrides are in App.css via .container, .main-layout, etc. */
+/* This file is kept for any home-specific additions */
+
+@media (max-width: 768px) {
+    .main-layout {
+        flex-direction: column;
+    }
+
+    .records-panel {
+        width: 100%;
+    }
+}

@@ -1,0 +1,109 @@
+.retrieval-container {
+    width: 100%;
+    padding: 10px;
+}
+
+.retrieval-container h1 {
+    margin-bottom: 28px;
+    font-size: 26px;
+    color: #1a1a2e;
+}
+
+.retrieval-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e0e0e0;
+}
+
+.retrieval-form label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.retrieval-form input {
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #1a1a2e;
+    flex: 1;
+    min-width: 150px;
+    transition: border-color 0.2s;
+}
+
+.retrieval-form input:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+.retrieval-button-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    margin-top: 24px;
+}
+
+.retrieval-back-btn,
+.retrieval-cancel-btn {
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.retrieval-back-btn {
+    background: transparent;
+    color: #1a1a2e;
+    border: 2px solid #1a1a2e;
+}
+
+.retrieval-back-btn:hover {
+    background: #1a1a2e;
+    color: white;
+}
+
+.retrieval-cancel-btn {
+    background: #f5f5f5;
+    color: #333;
+    border: 2px solid #e0e0e0;
+}
+
+.retrieval-cancel-btn:hover {
+    background: #e0e0e0;
+}
+
+.retrieval-records-panel {
+    margin-top: 30px;
+    width: 100%;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.retrieval-records-panel h2 {
+    margin-bottom: 16px;
+    color: #1a1a2e;
+    font-size: 18px;
+}
+
+.retrieval-records-placeholder {
+    min-height: 260px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 15px;
+    color: #999;
+}

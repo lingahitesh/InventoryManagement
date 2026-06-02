@@ -1,0 +1,149 @@
+.form-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+}
+
+.form-container h1 {
+    margin-bottom: 28px;
+    font-size: 26px;
+    color: #1a1a2e;
+}
+
+/* Card wrapper */
+.feed-form {
+    background: white;
+    padding: 28px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Each row is a flex container */
+.feed-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* Single field spans full width */
+.feed-row-single .feed-field {
+    flex: 1;
+}
+
+/* Three equal columns */
+.feed-row-three .feed-field {
+    flex: 1;
+}
+
+/* Individual field wrapper */
+.feed-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.feed-field label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+}
+
+.feed-field input,
+.feed-field select,
+.feed-field textarea {
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1a1a2e;
+    width: 100%;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    background: white;
+}
+
+.feed-field input:focus,
+.feed-field select:focus,
+.feed-field textarea:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+.feed-field input[readonly] {
+    background: #f8f9fa;
+    color: #888;
+    cursor: default;
+}
+
+.feed-field textarea {
+    resize: none;
+}
+
+.feed-field select {
+    cursor: pointer;
+}
+
+.optional {
+    font-weight: 400;
+    font-size: 11px;
+    color: #999;
+    text-transform: lowercase;
+}
+
+/* Reused across pages */
+.field-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.field-error {
+    color: #e53935;
+    font-size: 12px;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    margin-top: 30px;
+}
+
+.submit-btn {
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.submit-btn:hover {
+    background: #16213e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 26, 46, 0.2);
+}
+
+.cancel-btn {
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    background: #f5f5f5;
+    color: #333;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+    background: #e0e0e0;
+}
