@@ -10,3 +10,60 @@
         width: 100%;
     }
 }
+
+.records-table-wrapper {
+    overflow-x: auto;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.records-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.records-table th,
+.records-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.records-table th {
+    background: #f5f5f5;
+    font-weight: 700;
+    color: #1a1a2e;
+    position: sticky;
+    top: 0;
+}
+
+.records-table tbody tr:hover {
+    background: #f0f4ff;
+}
+
+/* ── Charts panel (right side of home) ── */
+.charts-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chart-placeholder {
+    flex: 1;
+    min-height: 160px;
+    background: #f8f9fa;
+    border: 2px dashed #d0d0d0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-label {
+    font-size: 14px;
+    color: #aaa;
+    font-weight: 500;
+}

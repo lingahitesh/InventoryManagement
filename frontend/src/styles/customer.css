@@ -259,7 +259,16 @@
 }
 
 .edit-btn,
-.delete-btn,
+.delete-btn {
+    border: none;
+    border-radius: 5px;
+    padding: 4px 9px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    margin-left: 4px;
+    transition: background 0.15s;
+}
 .save-btn,
 .cancel-btn {
     padding: 6px 14px;
@@ -273,12 +282,12 @@
 }
 
 .edit-btn {
-    background: #fff3cd;
-    color: #856404;
+    background: #e3f2fd;
+    color: #1565c0;
 }
 
 .edit-btn:hover {
-    background: #ffe69c;
+    background:#bbdefb;;
 }
 
 .delete-btn {
@@ -375,4 +384,165 @@
 
 .cancel-delete-btn:hover {
     background: #e0e0e0;
+}
+
+.api-error {
+    background: #fdecea;
+    color: #c0392b;
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    font-weight: 600;
+}
+
+/* ── Floating Action Button ── */
+.customer-fab {
+    position: fixed;
+    bottom: 36px;
+    right: 36px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    color: white;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    z-index: 200;
+}
+.customer-fab:hover { background: #2d2d5e; transform: scale(1.08); }
+.customer-fab:active { transform: scale(0.96); }
+
+/* ── Toolbar ── */
+.customer-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.cust-refresh-btn, .cust-clear-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid #d0d0d0;
+    background: #f5f5f5;
+    color: #333;
+    transition: background 0.15s;
+}
+.cust-refresh-btn:hover, .cust-clear-btn:hover { background: #e0e0e0; }
+
+/* ── Filter row under column headers ── */
+.cust-filter-row td {
+    padding: 4px 6px;
+    background: #f0f0f8;
+}
+
+.cust-filter-row input {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.cust-filter-row input:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+/* ── Header row with toolbar (like Inventory tab) ── */
+.customer-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.customer-header-row h1 { margin: 0; }
+
+.customer-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ── View-only customer form ── */
+.viewonly-form input,
+.viewonly-form select,
+.viewonly-form textarea {
+    pointer-events: none;
+    background: #f8f8f8 !important;
+    color: #444;
+    border-color: #e0e0e0 !important;
+    cursor: default;
+}
+
+/* ── View button (🔍) ── */
+.view-btn {
+    padding: 4px 8px;
+    font-size: 13px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    background: #e8f4fd;
+    color: #1565c0;
+    transition: background 0.15s;
+    margin-right: 2px;
+}
+.view-btn:hover { background: #bbdefb; }
+
+/* ── Compact table so all 7 cols fit in one row ── */
+.customer-table {
+    table-layout: fixed;
+    width: 100%;
+    font-size: 12px;
+}
+
+.customer-table th,
+.customer-table td {
+    padding: 7px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* Column widths */
+.customer-table th:nth-child(1),
+.customer-table td:nth-child(1) { width: 14%; }  /* Name */
+.customer-table th:nth-child(2),
+.customer-table td:nth-child(2) { width: 17%; }  /* Email */
+.customer-table th:nth-child(3),
+.customer-table td:nth-child(3) { width: 11%; }  /* Phone */
+.customer-table th:nth-child(4),
+.customer-table td:nth-child(4) { width: 23%; }  /* Address */
+.customer-table th:nth-child(5),
+.customer-table td:nth-child(5) { width: 10%; }  /* City */
+.customer-table th:nth-child(6),
+.customer-table td:nth-child(6) { width: 13%; }  /* GST */
+.customer-table th:nth-child(7),
+.customer-table td:nth-child(7) { width: 12%; }  /* Actions */
+
+/* Address cell — allow wrapping */
+.customer-table .col-address,
+.customer-table .col-address .address-cell {
+    white-space: normal;
+    overflow: visible;
+}
+
+/* Filter row compact inputs */
+.cust-filter-row td input {
+    font-size: 11px;
+    padding: 3px 6px;
 }

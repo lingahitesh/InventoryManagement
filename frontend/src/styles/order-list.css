@@ -1,0 +1,280 @@
+.order-list-container {
+    padding: 10px;
+    position: relative;
+}
+
+.order-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    width: 100%;
+}
+
+.order-list-header h1 {
+    font-size: 26px;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.order-list-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ol-refresh-btn, .ol-clear-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid #d0d0d0;
+    background: #f5f5f5;
+    color: #333;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+.ol-refresh-btn:hover:not(:disabled), .ol-clear-btn:hover { background: #e5e5e5; border-color: #aaa; }
+.ol-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ol-error {
+    background: #fdecea;
+    color: #c0392b;
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    font-weight: 600;
+}
+
+/* ── Search bar ── */
+.ol-search-bar {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.ol-search-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.ol-search-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+}
+
+.ol-search-field input {
+    padding: 8px 12px;
+    border: 2px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 180px;
+    transition: border-color 0.2s;
+}
+.ol-search-field input:focus { outline: none; border-color: #4fc3f7; }
+
+.ol-placeholder {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+    font-size: 15px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+}
+
+/* ── Table ── */
+.ol-table-scroll { overflow-x: auto; }
+
+.ol-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.ol-table th {
+    background: #1a1a2e;
+    color: white;
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.ol-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+    color: #1a1a2e;
+    vertical-align: middle;
+}
+
+.ol-table tbody tr:hover { background: #f8f9fa; }
+.ol-editing-row { background: #fffbf0 !important; }
+
+/* ── Edit inputs inside table ── */
+.ol-edit-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 2px solid #4fc3f7;
+    border-radius: 5px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.ol-edit-error {
+    color: #c0392b;
+    font-size: 12px;
+    display: block;
+    margin-top: 3px;
+}
+
+/* ── Action buttons ── */
+.ol-edit-btn, .ol-save-btn, .ol-cancel-btn {
+    border: none;
+    border-radius: 5px;
+    padding: 4px 9px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 400;
+    margin-left: 4px;
+    transition: background 0.15s;
+}
+
+.ol-edit-btn   { background: #e3f2fd; color: #1565c0; }
+.ol-edit-btn:hover   { background: #bbdefb; }
+
+.ol-save-btn   { background: #e8f5e9; color: #2e7d32; }
+.ol-save-btn:hover   { background: #c8e6c9; }
+
+.ol-cancel-btn { background: #ffebee; color: #c62828; }
+.ol-cancel-btn:hover { background: #ffcdd2; }
+
+/* ── Details button ── */
+.ol-details-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid #bbb;
+    background: #f5f5f5;
+    color: #333;
+    margin-left: 4px;
+    transition: background 0.15s;
+}
+.ol-details-btn:hover { background: #e5e5e5; }
+
+/* ── Expanded items row ── */
+.ol-items-row td { padding: 0; background: #f8f9fa; }
+
+.ol-items-loading {
+    padding: 12px 20px;
+    color: #888;
+    font-size: 13px;
+}
+
+.ol-items-error {
+    padding: 10px 20px;
+    color: #c0392b;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ol-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.ol-items-table th {
+    background: #2d2d5e;
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.ol-items-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    color: #333;
+}
+
+.ol-items-table tbody tr:hover { background: #eef2ff; }
+
+/* ── Floating Action Button ── */
+.ol-fab {
+    position: fixed;
+    bottom: 36px;
+    right: 36px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    color: white;
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    z-index: 200;
+}
+.ol-fab:hover { background: #2d2d5e; transform: scale(1.08); }
+.ol-fab:active { transform: scale(0.96); }
+
+.ol-delete-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    background: #ffebee;
+    color: #c62828;
+    margin-left: 4px;
+    transition: background 0.15s;
+}
+.ol-delete-btn:hover { background: #ffcdd2; }
+
+.ol-search-field select {
+    padding: 8px 12px;
+    border: 2px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 180px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.ol-search-field select:focus { outline: none; border-color: #4fc3f7; }
+
+.ol-pi-btn {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    background: #e8f5e9;
+    color: #2e7d32;
+    margin-left: 4px;
+    transition: background 0.15s;
+}
+.ol-pi-btn:hover { background: #c8e6c9; }

@@ -1,0 +1,15 @@
+/* ── Shared table price column styles ── */
+.th-price,
+.td-price {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Shared table quantity column styles ── */
+.th-qty,
+.td-qty {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}

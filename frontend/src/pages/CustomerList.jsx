@@ -1,42 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "../styles/customer.css";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from "../api";
+import ComboInput from "../components/ComboInput";
+import ModalOverlay from "../components/ModalOverlay";
 
 function CustomerList({ goBack, customers, setCustomers })
 {
-    // "add" | "edit" | null
-    const [formMode, setFormMode] = useState(null);
-    const [editingId, setEditingId] = useState(null);
+    const [formMode,      setFormMode]      = useState(null); // "add" | "edit" | null
+    const [editingId,     setEditingId]     = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
-    const [saveConfirm, setSaveConfirm] = useState(false);
-    const [successMsg, setSuccessMsg] = useState("");
-    const [formErrors, setFormErrors] = useState({});
+    const [saveConfirm,   setSaveConfirm]   = useState(false);
+    const [successMsg,    setSuccessMsg]    = useState("");
+    const [formErrors,    setFormErrors]    = useState({});
+    const [viewingCustomer, setViewingCustomer] = useState(null);
+    const [apiError,      setApiError]      = useState("");
+    const [loading,       setLoading]       = useState(false);
+
+    // Search filters
+    const [srchName,    setSrchName]    = useState("");
+    const [srchEmail,   setSrchEmail]   = useState("");
+    const [srchPhone,   setSrchPhone]   = useState("");
+    const [srchCity,    setSrchCity]    = useState("");
+    const [srchState,   setSrchState]   = useState("");
+    const [srchGst,     setSrchGst]     = useState("");
+    const [srchPincode, setSrchPincode] = useState("");
 
     const emptyForm = {
-        fname: "",
-        mname: "",
-        lname: "",
-        email: "",
-        phone: "",
-        address: "",
-        pincode: "",
-        city: "",
-        state: "",
-        gst: ""
+        fname: "", mname: "", lname: "",
+        email: "", phone: "", address: "",
+        pincode: "", city: "", state: "", gst: ""
     };
 
     const [formData, setFormData] = useState(emptyForm);
 
-    const generateId = () =>
-    {
-        const nextId = customers.length + 1;
-        return String(nextId).padStart(3, "0");
-    };
+    // ── Load customers on mount ──────────────────────────────
+    useEffect(() => {
+        setLoading(true);
+        getCustomers()
+            .then(data => setCustomers(data))
+            .catch(err => setApiError(err.message || "Failed to load customers"))
+            .finally(() => setLoading(false));
+    }, []);
 
     const handleChange = (e) =>
-    {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
 
     const validateForm = () =>
     {
@@ -57,26 +65,47 @@ function CustomerList({ goBack, customers, setCustomers })
     const fullName = (c) =>
         [c.fname, c.mname, c.lname].filter(Boolean).join(" ");
 
-    /* ── Add ── */
+    const toApiPayload = () => ({
+        fname:   formData.fname,
+        mname:   formData.mname || null,
+        lname:   formData.lname,
+        contact: formData.phone,
+        email:   formData.email,
+        address: formData.address,
+        pincode: parseInt(formData.pincode, 10),
+        state:   formData.state,
+        city:    formData.city,
+        gst:     formData.gst
+    });
+
+    // ── Add ─────────────────────────────────────────────────
     const openAddForm = () =>
     {
         setFormData(emptyForm);
         setFormErrors({});
+        setApiError("");
         setEditingId(null);
         setFormMode("add");
     };
 
-    const handleAdd = () =>
+    const handleAdd = async () =>
     {
         if (!validateForm()) return;
-        setCustomers([...customers, { id: generateId(), ...formData }]);
-        setFormData(emptyForm);
-        setFormErrors({});
-        setFormMode(null);
-        showSuccess("Customer added successfully");
+        setApiError("");
+        try {
+            await addCustomer(toApiPayload());
+            const fresh = await getCustomers();
+            setCustomers(fresh);
+            setFormData(emptyForm);
+            setFormErrors({});
+            setFormMode(null);
+            showSuccess("Customer added successfully");
+        } catch (err) {
+            setApiError(err.message || "Failed to add customer");
+        }
     };
 
-    /* ── Edit ── */
+    // ── Edit ─────────────────────────────────────────────────
     const handleEditClick = (customer) =>
     {
         setFormData({
@@ -84,7 +113,7 @@ function CustomerList({ goBack, customers, setCustomers })
             mname:   customer.mname   || "",
             lname:   customer.lname   || "",
             email:   customer.email   || "",
-            phone:   customer.phone   || "",
+            phone:   customer.contact || "",
             address: customer.address || "",
             pincode: customer.pincode || "",
             city:    customer.city    || "",
@@ -92,29 +121,34 @@ function CustomerList({ goBack, customers, setCustomers })
             gst:     customer.gst     || ""
         });
         setFormErrors({});
-        setEditingId(customer.id);
+        setApiError("");
+        setEditingId(customer.customer_id);
         setFormMode("edit");
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    // "Save Changes" clicked → validate first, then show dialog
     const handleSaveClick = () =>
     {
         if (!validateForm()) return;
         setSaveConfirm(true);
     };
 
-    const confirmSave = () =>
+    const confirmSave = async () =>
     {
         setSaveConfirm(false);
-        setCustomers(customers.map(c =>
-            c.id === editingId ? { ...c, ...formData } : c
-        ));
-        setEditingId(null);
-        setFormData(emptyForm);
-        setFormErrors({});
-        setFormMode(null);
-        showSuccess("Customer updated successfully");
+        setApiError("");
+        try {
+            await updateCustomer(editingId, toApiPayload());
+            const fresh = await getCustomers();
+            setCustomers(fresh);
+            setEditingId(null);
+            setFormData(emptyForm);
+            setFormErrors({});
+            setFormMode(null);
+            showSuccess("Customer updated successfully");
+        } catch (err) {
+            setApiError(err.message || "Failed to update customer");
+        }
     };
 
     const handleCancelForm = () =>
@@ -123,16 +157,24 @@ function CustomerList({ goBack, customers, setCustomers })
         setEditingId(null);
         setFormData(emptyForm);
         setFormErrors({});
+        setApiError("");
     };
 
-    /* ── Delete ── */
+    // ── Delete ───────────────────────────────────────────────
     const handleDeleteClick = (customer) => setDeleteConfirm(customer);
 
-    const confirmDelete = () =>
+    const confirmDelete = async () =>
     {
-        setCustomers(customers.filter(c => c.id !== deleteConfirm.id));
+        const id = deleteConfirm.customer_id;
         setDeleteConfirm(null);
-        showSuccess("Customer deleted successfully");
+        setApiError("");
+        try {
+            await deleteCustomer(id);
+            setCustomers(customers.filter(c => c.customer_id !== id));
+            showSuccess("Customer deleted successfully");
+        } catch (err) {
+            setApiError(err.message || "Failed to delete customer");
+        }
     };
 
     const showSuccess = (msg) =>
@@ -146,24 +188,29 @@ function CustomerList({ goBack, customers, setCustomers })
     return (
         <div className="customer-container">
 
-            <button className="back-btn" onClick={goBack}>← BACK</button>
+            <div className="customer-header-row">
+                <h1>Customer List</h1>
+                <div className="customer-toolbar">
+                    <button className="cust-refresh-btn" onClick={() => {
+                        setLoading(true);
+                        getCustomers().then(d => setCustomers(d)).catch(() => {}).finally(() => setLoading(false));
+                    }}>↻</button>
+                    <button className="cust-clear-btn" onClick={() => {
+                        setSrchName(""); setSrchEmail(""); setSrchPhone("");
+                        setSrchCity(""); setSrchState(""); setSrchGst(""); setSrchPincode("");
+                    }}>✕ Clear</button>
+                </div>
+            </div>
 
-            <h1>Customer Management</h1>
+            {successMsg && <div className="success-msg">{successMsg}</div>}
+            {apiError   && <div className="api-error">{apiError}</div>}
 
-            {successMsg && (
-                <div className="success-msg">{successMsg}</div>
-            )}
-
-            {/* ── Save Changes confirmation ── */}
+            {/* ── Save confirmation ── */}
             <ConfirmDialog
                 open={saveConfirm}
                 variant="success"
                 title="Save Changes"
-                message={
-                    <>
-                        Save changes to <strong>{fullName(formData)}</strong>?
-                    </>
-                }
+                message={<>Save changes to <strong>{fullName(formData)}</strong>?</>}
                 confirmLabel="Yes, Save"
                 cancelLabel="Go Back"
                 onConfirm={confirmSave}
@@ -190,42 +237,69 @@ function CustomerList({ goBack, customers, setCustomers })
 
             {/* ── Add / Edit form ── */}
             {!formOpen && (
-                <button className="add-customer-btn" onClick={openAddForm}>
-                    + Add Customer
-                </button>
+                <button className="customer-fab" onClick={openAddForm} title="Add new customer">+</button>
             )}
 
-            {formOpen && (
+            {/* View customer modal */}
+            {viewingCustomer && (
+                <ModalOverlay open={true}
+                    title={`Customer: ${fullName(viewingCustomer)}`}
+                    onClose={() => setViewingCustomer(null)}>
+                    <div className="customer-form viewonly-form">
+                        <div className="form-row form-row-inline">
+                            <label className="row-label">Name</label>
+                            <div className="row-fields">
+                                <div className="field-wrap"><input value={viewingCustomer.fname||""} readOnly /></div>
+                                <div className="field-wrap"><input value={viewingCustomer.mname||""} readOnly /></div>
+                                <div className="field-wrap"><input value={viewingCustomer.lname||""} readOnly /></div>
+                            </div>
+                        </div>
+                        <div className="form-row form-row-inline">
+                            <label className="row-label">Contact</label>
+                            <div className="row-fields">
+                                <div className="field-wrap"><input value={viewingCustomer.email||""} readOnly /></div>
+                                <div className="field-wrap"><input value={viewingCustomer.contact||""} readOnly /></div>
+                            </div>
+                        </div>
+                        <div className="form-row form-row-inline">
+                            <label className="row-label">Address</label>
+                            <div className="row-fields">
+                                <div className="field-wrap field-wrap-grow"><textarea value={viewingCustomer.address||""} readOnly rows={2} /></div>
+                                <div className="field-wrap"><input value={String(viewingCustomer.pincode||"")} readOnly /></div>
+                            </div>
+                        </div>
+                        <div className="form-row form-row-inline">
+                            <label className="row-label">Details</label>
+                            <div className="row-fields">
+                                <div className="field-wrap"><input value={viewingCustomer.city||""} readOnly /></div>
+                                <div className="field-wrap"><input value={viewingCustomer.state||""} readOnly /></div>
+                                <div className="field-wrap"><input value={viewingCustomer.gst||""} readOnly /></div>
+                            </div>
+                        </div>
+                    </div>
+                </ModalOverlay>
+            )}
+
+            <ModalOverlay
+                open={formOpen}
+                title={formMode === "edit" ? "Edit Customer" : "Add New Customer"}
+                onClose={handleCancelForm}
+            >
                 <div className="customer-form">
-                    <h3>
-                        {formMode === "edit" ? "Edit Customer" : "Add New Customer"}
-                    </h3>
 
                     {/* Row 1: Name */}
                     <div className="form-row form-row-inline">
                         <label className="row-label">Name</label>
                         <div className="row-fields">
                             <div className="field-wrap">
-                                <input
-                                    name="fname" maxLength={100}
-                                    value={formData.fname} onChange={handleChange}
-                                    placeholder="First Name"
-                                />
+                                <input name="fname" maxLength={100} value={formData.fname} onChange={handleChange} placeholder="First Name" />
                                 {formErrors.fname && <span className="field-error">{formErrors.fname}</span>}
                             </div>
                             <div className="field-wrap">
-                                <input
-                                    name="mname" maxLength={100}
-                                    value={formData.mname} onChange={handleChange}
-                                    placeholder="Middle Name"
-                                />
+                                <input name="mname" maxLength={100} value={formData.mname} onChange={handleChange} placeholder="Middle Name" />
                             </div>
                             <div className="field-wrap">
-                                <input
-                                    name="lname" maxLength={100}
-                                    value={formData.lname} onChange={handleChange}
-                                    placeholder="Last Name"
-                                />
+                                <input name="lname" maxLength={100} value={formData.lname} onChange={handleChange} placeholder="Last Name" />
                                 {formErrors.lname && <span className="field-error">{formErrors.lname}</span>}
                             </div>
                         </div>
@@ -236,42 +310,26 @@ function CustomerList({ goBack, customers, setCustomers })
                         <label className="row-label">Contact</label>
                         <div className="row-fields">
                             <div className="field-wrap">
-                                <input
-                                    name="email" maxLength={100}
-                                    value={formData.email} onChange={handleChange}
-                                    placeholder="Email"
-                                />
+                                <input name="email" maxLength={100} value={formData.email} onChange={handleChange} placeholder="Email" />
                                 {formErrors.email && <span className="field-error">{formErrors.email}</span>}
                             </div>
                             <div className="field-wrap">
-                                <input
-                                    name="phone" maxLength={100}
-                                    value={formData.phone} onChange={handleChange}
-                                    placeholder="Phone Number"
-                                />
+                                <input name="phone" maxLength={100} value={formData.phone} onChange={handleChange} placeholder="Phone Number" />
                                 {formErrors.phone && <span className="field-error">{formErrors.phone}</span>}
                             </div>
                         </div>
                     </div>
 
-                    {/* Row 3: Billing Address + Pincode */}
+                    {/* Row 3: Address + Pincode */}
                     <div className="form-row form-row-inline">
                         <label className="row-label">Billing Address</label>
                         <div className="row-fields">
                             <div className="field-wrap field-wrap-grow">
-                                <textarea
-                                    name="address" maxLength={200}
-                                    value={formData.address} onChange={handleChange}
-                                    placeholder="Billing Address" rows={3}
-                                />
+                                <textarea name="address" maxLength={200} value={formData.address} onChange={handleChange} placeholder="Billing Address" rows={3} />
                                 {formErrors.address && <span className="field-error">{formErrors.address}</span>}
                             </div>
                             <div className="field-wrap">
-                                <input
-                                    name="pincode" maxLength={20}
-                                    value={formData.pincode} onChange={handleChange}
-                                    placeholder="Pincode"
-                                />
+                                <input name="pincode" maxLength={20} value={formData.pincode} onChange={handleChange} placeholder="Pincode" />
                                 {formErrors.pincode && <span className="field-error">{formErrors.pincode}</span>}
                             </div>
                         </div>
@@ -282,27 +340,15 @@ function CustomerList({ goBack, customers, setCustomers })
                         <label className="row-label">Details</label>
                         <div className="row-fields">
                             <div className="field-wrap">
-                                <input
-                                    name="city" maxLength={100}
-                                    value={formData.city} onChange={handleChange}
-                                    placeholder="City"
-                                />
+                                <input name="city" maxLength={100} value={formData.city} onChange={handleChange} placeholder="City" />
                                 {formErrors.city && <span className="field-error">{formErrors.city}</span>}
                             </div>
                             <div className="field-wrap">
-                                <input
-                                    name="state" maxLength={100}
-                                    value={formData.state} onChange={handleChange}
-                                    placeholder="State"
-                                />
+                                <input name="state" maxLength={100} value={formData.state} onChange={handleChange} placeholder="State" />
                                 {formErrors.state && <span className="field-error">{formErrors.state}</span>}
                             </div>
                             <div className="field-wrap">
-                                <input
-                                    name="gst" maxLength={100}
-                                    value={formData.gst} onChange={handleChange}
-                                    placeholder="GST Number"
-                                />
+                                <input name="gst" maxLength={100} value={formData.gst} onChange={handleChange} placeholder="GST Number" />
                                 {formErrors.gst && <span className="field-error">{formErrors.gst}</span>}
                             </div>
                         </div>
@@ -315,53 +361,61 @@ function CustomerList({ goBack, customers, setCustomers })
                         >
                             {formMode === "edit" ? "Save Changes" : "Add Customer"}
                         </button>
-                        <button className="cancel-form-btn" onClick={handleCancelForm}>
-                            Cancel
-                        </button>
+                        <button className="cancel-form-btn" onClick={handleCancelForm}>Cancel</button>
                     </div>
                 </div>
-            )}
+            </ModalOverlay>
 
             {/* ── Table ── */}
             <div className="customer-table-wrapper">
-                {customers.length === 0 ? (
+                {loading ? (
+                    <div className="no-records">Loading customers…</div>
+                ) : customers.length === 0 ? (
                     <div className="no-records">No customer records available.</div>
                 ) : (
                     <table className="customer-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th className="col-address">Address</th>
-                                <th>Pincode</th>
                                 <th>City</th>
-                                <th>State</th>
                                 <th>GST</th>
                                 <th className="col-actions">Actions</th>
                             </tr>
+                            <tr className="cust-filter-row">
+                                <td><ComboInput value={srchName}    onChange={e => setSrchName(e.target.value)}    placeholder="Name…" options={[...new Set(customers.map(c => fullName(c)))]} id="cf-name" /></td>
+                                <td><ComboInput value={srchEmail}   onChange={e => setSrchEmail(e.target.value)}   placeholder="Email…" options={[...new Set(customers.map(c => c.email).filter(Boolean))]} id="cf-email" /></td>
+                                <td><ComboInput value={srchPhone}   onChange={e => setSrchPhone(e.target.value)}   placeholder="Phone…" options={[...new Set(customers.map(c => c.contact).filter(Boolean))]} id="cf-phone" /></td>
+                                <td></td>
+                                <td><ComboInput value={srchCity}    onChange={e => setSrchCity(e.target.value)}    placeholder="City…" options={[...new Set(customers.map(c => c.city).filter(Boolean))]} id="cf-city" /></td>
+                                <td><ComboInput value={srchGst}     onChange={e => setSrchGst(e.target.value)}     placeholder="GST…" options={[...new Set(customers.map(c => c.gst).filter(Boolean))]} id="cf-gst" /></td>
+                                <td></td>
+                            </tr>
                         </thead>
                         <tbody>
-                            {customers.map(customer => (
-                                <tr
-                                    key={customer.id}
-                                    className={editingId === customer.id ? "row-editing" : ""}
-                                >
-                                    <td>{customer.id}</td>
+                            {customers
+                                .filter(c => {
+                                    const name = fullName(c).toLowerCase();
+                                    return (!srchName    || name.includes(srchName.toLowerCase())) &&
+                                           (!srchEmail   || (c.email||"").toLowerCase().includes(srchEmail.toLowerCase())) &&
+                                           (!srchPhone   || (c.contact||"").includes(srchPhone)) &&
+                                           (!srchCity    || (c.city||"").toLowerCase().includes(srchCity.toLowerCase())) &&
+                                           (!srchGst     || (c.gst||"").toLowerCase().includes(srchGst.toLowerCase()));
+                                })
+                                .map(customer => (
+                                <tr key={customer.customer_id} className={editingId === customer.customer_id ? "row-editing" : ""}>
                                     <td>{fullName(customer)}</td>
                                     <td>{customer.email}</td>
-                                    <td>{customer.phone}</td>
-                                    <td className="col-address">
-                                        <div className="address-cell">{customer.address}</div>
-                                    </td>
-                                    <td>{customer.pincode}</td>
+                                    <td>{customer.contact}</td>
+                                    <td className="col-address"><div className="address-cell">{customer.address}</div></td>
                                     <td>{customer.city}</td>
-                                    <td>{customer.state}</td>
                                     <td>{customer.gst}</td>
                                     <td className="col-actions">
-                                        <button className="edit-btn" onClick={() => handleEditClick(customer)}>Edit</button>
-                                        <button className="delete-btn" onClick={() => handleDeleteClick(customer)}>Delete</button>
+                                        <button className="view-btn" title="View" onClick={() => setViewingCustomer(customer)}>🔍</button>
+                                        <button className="edit-btn" onClick={() => handleEditClick(customer)}>✎</button>
+                                        <button className="delete-btn" onClick={() => handleDeleteClick(customer)}>🗑</button>
                                     </td>
                                 </tr>
                             ))}

@@ -39,6 +39,11 @@
     flex: 1;
 }
 
+/* Two equal columns */
+.feed-row-two .feed-field {
+    flex: 1;
+}
+
 /* Individual field wrapper */
 .feed-field {
     display: flex;
@@ -146,4 +151,35 @@
 
 .cancel-btn:hover {
     background: #e0e0e0;
+}
+
+.submit-error {
+    color: #c0392b;
+    background: #fdecea;
+    border: 1px solid #e74c3c;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.submit-success {
+    color: #1a7a4a;
+    background: #e6f9f0;
+    border: 1px solid #2ecc71;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+/* View-only mode — disable all interaction */
+.viewonly-form input,
+.viewonly-form select,
+.viewonly-form textarea {
+    pointer-events: none;
+    background: #f8f8f8 !important;
+    color: #444;
+    border-color: #e0e0e0 !important;
+    cursor: default;
 }
