@@ -9,6 +9,7 @@ import InventoryRetrieval  from "./pages/InventoryRetrieval";
 import PlaceOrder   from "./pages/PlaceOrder";
 import CustomerList from "./pages/CustomerList";
 import OrderList    from "./pages/OrderList";
+import Dispatch     from "./pages/Dispatch";
 import ModalOverlay from "./components/ModalOverlay";
 import { getInventory } from "./api";
 
@@ -117,6 +118,7 @@ function App()
         { id: "retrieval",  title: "Inventory" },
         { id: "customer",   title: "Customer List" },
         { id: "orderlist",  title: "Order List" },
+        { id: "dispatch",   title: "Dispatch" },
     ];
 
     return (
@@ -219,6 +221,11 @@ function App()
                             />
                         </ModalOverlay>
                     )}
+                </div>
+
+                {/* ── Dispatch ── */}
+                <div style={{ display: activeTab === "dispatch" ? "block" : "none" }}>
+                    <Dispatch />
                 </div>
 
             </div>

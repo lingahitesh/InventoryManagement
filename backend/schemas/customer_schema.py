@@ -1,9 +1,10 @@
+from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
 
 class CustomerCreate(BaseModel):
 
     fname: str
-    mname: str = Field(default=None)
+    mname: Optional[str] = None
     lname: str
     contact: str
     email: EmailStr

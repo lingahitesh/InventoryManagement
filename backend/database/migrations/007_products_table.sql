@@ -1,0 +1,11 @@
+---Products table creation
+CREATE TABLE PRODUCT_MASTER
+            (
+                PRODUCT_ID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                PRODUCT_TYPE VARCHAR2(50) NOT NULL,
+                PRODUCT_CODE VARCHAR2(20),
+                PRODUCT_SUBTYPE VARCHAR2(500) NOT NULL,
+                HSN_CODE NUMBER(8) NOT NULL,
+                CONSTRAINT UNIQUE_PRODUCT
+                UNIQUE (PRODUCT_TYPE, PRODUCT_CODE, PRODUCT_SUBTYPE)
+            )

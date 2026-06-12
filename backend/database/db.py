@@ -35,7 +35,7 @@ def init_db():
                 sku_subtype VARCHAR2(50),
                 sku_dim VARCHAR2(50) NOT NULL,
                 sku_quantity NUMBER NOT NULL,
-                sku__cost_price NUMBER(9,2) NOT NULL,
+                sku_cost_price NUMBER(9,2) NOT NULL,
                 sku_desc VARCHAR2(100),
                 sku_units NUMBER(2)
             )
@@ -48,7 +48,7 @@ def init_db():
         cursor.execute("""
             CREATE SEQUENCE inventory_seq
             START WITH 1
-            INCREMENT BY 1
+            INCREMENT BY 1 NOCACHE NOCYCLE
         """)
     except db.DatabaseError as e:
         error, = e.args
@@ -82,7 +82,7 @@ def init_db():
         cursor.execute("""
             CREATE SEQUENCE customer_seq
             START WITH 1
-            INCREMENT BY 1
+            INCREMENT BY 1 NOCACHE NOCYCLE
         """)
     except db.DatabaseError as e:
         error, = e.args
@@ -112,7 +112,7 @@ def init_db():
         cursor.execute("""
             CREATE SEQUENCE order_seq
             START WITH 1
-            INCREMENT BY 1
+            INCREMENT BY 1 NOCACHE NOCYCLE
         """)
     except db.DatabaseError as e:
         error, = e.args
@@ -146,7 +146,7 @@ def init_db():
         cursor.execute("""
             CREATE SEQUENCE order_item_seq
             START WITH 1
-            INCREMENT BY 1
+            INCREMENT BY 1 NOCACHE NOCYCLE
         """)
     except db.DatabaseError as e:
         error, = e.args

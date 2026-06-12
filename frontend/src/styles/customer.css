@@ -241,7 +241,7 @@
 }
 
 .address-cell {
-    width: 120px;
+    width: 220px;
     max-height: 36px;
     overflow-y: hidden;
     overflow-x: auto;
@@ -442,6 +442,23 @@
 .cust-refresh-btn:hover, .cust-clear-btn:hover { background: #e0e0e0; }
 
 /* ── Filter row under column headers ── */
+.cust-filter-row .col-filter
+{
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 12px;
+    border: 1px solid #c8c8c8;
+    border-radius: 4px;
+    background: white;
+    box-sizing: border-box;
+}
+
+.cust-filter-row .col-filter:focus
+{
+    outline: none;
+    border-color: #4fc3f7;
+}
+
 .cust-filter-row td {
     padding: 4px 6px;
     background: #f0f0f8;
@@ -534,15 +551,4 @@
 .customer-table th:nth-child(7),
 .customer-table td:nth-child(7) { width: 12%; }  /* Actions */
 
-/* Address cell — allow wrapping */
-.customer-table .col-address,
-.customer-table .col-address .address-cell {
-    white-space: normal;
-    overflow: visible;
-}
 
-/* Filter row compact inputs */
-.cust-filter-row td input {
-    font-size: 11px;
-    padding: 3px 6px;
-}

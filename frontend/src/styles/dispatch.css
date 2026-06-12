@@ -1,0 +1,42 @@
+.dispatch-container { padding: 10px; }
+.dispatch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.dispatch-header h1 { margin: 0; font-size: 26px; color: #1a1a2e; }
+.dispatch-toolbar { display: flex; gap: 8px; }
+.dispatch-error { background: #fdecea; color: #c0392b; border: 1px solid #e74c3c; border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; font-weight: 600; }
+.dispatch-placeholder { padding: 40px; text-align: center; color: #999; border: 2px dashed #ddd; border-radius: 8px; }
+
+.dispatch-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dispatch-table th { background: #1a1a2e; color: white; padding: 10px 14px; text-align: left; font-size: 12px; text-transform: uppercase; }
+.dispatch-table td { padding: 10px 14px; border-bottom: 1px solid #eee; vertical-align: middle; }
+.dispatch-table tbody tr:hover { background: #f8f9fa; }
+
+/* Form */
+.dispatch-form { max-height: 70vh; overflow-y: auto; }
+.dispatch-fields { margin-bottom: 16px; }
+.df-row { display: flex; gap: 12px; margin-bottom: 10px; }
+.df-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.df-field label { font-size: 12px; font-weight: 600; color: #555; }
+.df-field input, .df-field select { padding: 8px 10px; border: 2px solid #d0d0d0; border-radius: 6px; font-size: 13px; }
+.df-field input:focus { outline: none; border-color: #4fc3f7; }
+
+.dispatch-order-select { margin-bottom: 14px; }
+.dispatch-order-select h3 { font-size: 15px; margin-bottom: 8px; color: #1a1a2e; }
+.dispatch-order-select select { padding: 8px 12px; border: 2px solid #d0d0d0; border-radius: 6px; font-size: 13px; min-width: 300px; }
+
+.dispatch-order-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fafafa; }
+.doc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.doc-remove { border: none; background: #ffebee; color: #c62828; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.doc-remove:hover { background: #ffcdd2; }
+
+.dispatch-items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dispatch-items-table th { background: #f0f0f0; padding: 6px 10px; text-align: left; font-weight: 600; }
+.dispatch-items-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+.dispatch-items-table input[type="number"] { width: 60px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+.dispatch-items-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+.dispatch-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid #e0e0e0; }
+.dispatch-total { font-size: 14px; color: #1a1a2e; }
+.dispatch-footer .cancel-btn, .dispatch-footer .submit-btn { padding: 10px 24px; font-size: 14px; font-weight: 600; border-radius: 7px; cursor: pointer; margin-left: 8px; }
+.dispatch-footer .submit-btn { background: #1a1a2e; color: white; border: none; }
+.dispatch-footer .submit-btn:hover { background: #2d2d5e; }
+.dispatch-footer .cancel-btn { background: #f5f5f5; color: #333; border: 2px solid #d0d0d0; }

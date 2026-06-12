@@ -385,12 +385,12 @@ function CustomerList({ goBack, customers, setCustomers })
                                 <th className="col-actions">Actions</th>
                             </tr>
                             <tr className="cust-filter-row">
-                                <td><ComboInput value={srchName}    onChange={e => setSrchName(e.target.value)}    placeholder="Name…" options={[...new Set(customers.map(c => fullName(c)))]} id="cf-name" /></td>
-                                <td><ComboInput value={srchEmail}   onChange={e => setSrchEmail(e.target.value)}   placeholder="Email…" options={[...new Set(customers.map(c => c.email).filter(Boolean))]} id="cf-email" /></td>
-                                <td><ComboInput value={srchPhone}   onChange={e => setSrchPhone(e.target.value)}   placeholder="Phone…" options={[...new Set(customers.map(c => c.contact).filter(Boolean))]} id="cf-phone" /></td>
+                                <td><ComboInput className="col-filter" value={srchName}    onChange={e => setSrchName(e.target.value)}    placeholder="Name…" options={[...new Set(customers.map(c => fullName(c)))]} id="cf-name" /></td>
+                                <td><ComboInput className="col-filter" value={srchEmail}   onChange={e => setSrchEmail(e.target.value)}   placeholder="Email…" options={[...new Set(customers.map(c => c.email).filter(Boolean))]} id="cf-email" /></td>
+                                <td><ComboInput className="col-filter" value={srchPhone}   onChange={e => setSrchPhone(e.target.value)}   placeholder="Phone…" options={[...new Set(customers.map(c => c.contact).filter(Boolean))]} id="cf-phone" /></td>
                                 <td></td>
-                                <td><ComboInput value={srchCity}    onChange={e => setSrchCity(e.target.value)}    placeholder="City…" options={[...new Set(customers.map(c => c.city).filter(Boolean))]} id="cf-city" /></td>
-                                <td><ComboInput value={srchGst}     onChange={e => setSrchGst(e.target.value)}     placeholder="GST…" options={[...new Set(customers.map(c => c.gst).filter(Boolean))]} id="cf-gst" /></td>
+                                <td><ComboInput className="col-filter" value={srchCity}    onChange={e => setSrchCity(e.target.value)}    placeholder="City…" options={[...new Set(customers.map(c => c.city).filter(Boolean))]} id="cf-city" /></td>
+                                <td><ComboInput className="col-filter" value={srchGst}     onChange={e => setSrchGst(e.target.value)}     placeholder="GST…" options={[...new Set(customers.map(c => c.gst).filter(Boolean))]} id="cf-gst" /></td>
                                 <td></td>
                             </tr>
                         </thead>

@@ -77,3 +77,9 @@ export const getProductSubtypes = (type) => {
     const q = type ? `?product_type=${encodeURIComponent(type)}` : "";
     return request("GET", `/products/subtypes${q}`);
 };
+
+// ── Dispatches ─────────────────────────────────────────────
+export const getDispatches         = ()     => request("GET", "/dispatches");
+export const createDispatch        = (data) => request("POST", "/dispatches", data);
+export const getDispatchItems      = (id)   => request("GET", `/dispatches/${id}/items`);
+export const getOrderItemsForDispatch = (orderId) => request("GET", `/dispatches/order-items/${orderId}`);
