@@ -273,7 +273,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                     sku_type:      item.sku_type,
                     sku_subtype:   item.sku_subtype,
                     sku_dim:       item.sku_dim,
-                    quantity:      item.quantity,
+                    units:         item.quantity,
                     selling_price: item.sellingPrice
                 }))
             });
