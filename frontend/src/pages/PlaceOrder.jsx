@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "../styles/place-order.css";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { getCustomers, getInventory, checkAvailability, placeOrder, deleteOrder } from "../api";
+import { getCustomers, getInventory, checkAvailability, placeOrder, deleteOrder, getShippingAddresses } from "../api";
 import { useProductMaster } from "../hooks/useProductMaster";
 import ComboInput from "../components/ComboInput";
 
@@ -10,7 +10,11 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const [customers,      setCustomers]      = useState([]);
     const [inventoryItems, setInventoryItems] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [customerQuery,    setCustomerQuery]    = useState("");
     const [shippingAddress,  setShippingAddress]  = useState("");
+    const [shippingOptions,  setShippingOptions]  = useState([]);
+    const [customShip, setCustomShip] = useState({ address: "", pincode: "", city: "", state: "" });
+    const [isCustomShip, setIsCustomShip] = useState(false);
 
     // Cascading selectors
     const [selType,    setSelType]    = useState("");
@@ -18,7 +22,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const [selDim,     setSelDim]     = useState("");
 
     // Product master for Type/SubType dropdowns
-    const { types: productTypes, subtypes: productSubtypes } = useProductMaster(selType);
+    const { types: productTypes, subtypes: productSubtypes, hasDimensions } = useProductMaster(selType);
 
     // Availability for current type+subtype+dim
     const [availSkus,    setAvailSkus]    = useState(null);
@@ -28,6 +32,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const [unitCounts, setUnitCounts] = useState({});
 
     const [sellingPrice, setSellingPrice] = useState("");
+    const [deliveryCharge, setDeliveryCharge] = useState("");
 
     const [submitConfirm, setSubmitConfirm] = useState(false);
     const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -46,6 +51,11 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             .finally(() => setLoading(false));
     }, []);
 
+    // Helper: display subtype → raw subtype for DB queries
+    const toRawSub = (display) => {
+        const m = productSubtypes.find(s => s.display_subtype === display || s.raw_subtype === display);
+        return m ? m.raw_subtype : display;
+    };
     // ── Refresh products ─────────────────────────────────────
     const refreshProducts = () =>
     {
@@ -53,7 +63,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
         if (selType && selSubtype && selDim)
         {
             setAvailLoading(true);
-            checkAvailability(selType, selSubtype, selDim)
+            checkAvailability(selType, toRawSub(selSubtype), selDim)
                 .then(data => { setAvailSkus(data); setUnitCounts({}); })
                 .catch(() => setAvailSkus({ skus: [], total_available: 0 }))
                 .finally(() => setAvailLoading(false));
@@ -90,20 +100,34 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             const cust = customers.find(c => c.customer_id === editingOrder.customer_id);
             if (cust) {
                 setSelectedCustomer(cust);
+                setCustomerQuery(fullName(cust));
                 setShippingAddress(editingOrder.shipping_address || fullAddress(cust));
             }
-            // Pre-fill cart from order items
-            const cartItems = (editingOrder.items || []).map(item => ({
-                sku_type:     item.sku_type,
-                sku_subtype:  item.sku_subtype,
-                sku_dim:      item.sku_dim,
-                sku_id:       item.sku_id,
-                quantity:     item.quantity,
-                skuQuantity:  item.sku_quantity,
-                skuUnits:     item.quantity,
-                sellingPrice: item.selling_price
-            }));
-            setCart(cartItems);
+            setDeliveryCharge(editingOrder.delivery_charge ? String(editingOrder.delivery_charge) : "");
+            // Pre-fill cart from order items — merge items with same sku_id + sellingPrice
+            const mergedCart = [];
+            for (const item of (editingOrder.items || [])) {
+                const existing = mergedCart.find(c =>
+                    c.sku_id === item.sku_id && c.sellingPrice === item.selling_price
+                );
+                if (existing) {
+                    existing.quantity += item.units;
+                    existing.skuUnits += item.units;
+                } else {
+                    mergedCart.push({
+                        sku_type:     item.sku_type,
+                        sku_subtype:  item.sku_subtype,
+                        sku_dim:      item.sku_dim,
+                        sku_id:       item.sku_id,
+                        quantity:     item.units,
+                        skuQuantity:  item.sku_quantity,
+                        skuUnits:     item.units,
+                        sellingPrice: item.selling_price,
+                        fromEdit:     true
+                    });
+                }
+            }
+            setCart(mergedCart);
         }
     }, [editingOrder, customers]);
 
@@ -111,28 +135,37 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     useEffect(() =>
     {
         if (!selType || !selSubtype || !selDim) { setAvailSkus(null); setUnitCounts({}); return; }
+        // Find raw subtype directly from loaded subtypes list
+        const match = productSubtypes.find(s => s.display_subtype === selSubtype || s.raw_subtype === selSubtype);
+        const rawSub = match ? match.raw_subtype : selSubtype;
         setAvailLoading(true);
-        checkAvailability(selType, selSubtype, selDim)
-            .then(data => { setAvailSkus(data); setUnitCounts({}); })
-            .catch(() => setAvailSkus({ skus: [], total_available: 0 }))
+        checkAvailability(selType, rawSub, selDim)
+            .then(data => { console.log('[AVAIL result]', data); setAvailSkus(data); setUnitCounts({}); })
+            .catch(err => { console.log('[AVAIL error]', err); setAvailSkus({ skus: [], total_available: 0 }); })
             .finally(() => setAvailLoading(false));
-    }, [selType, selSubtype, selDim]);
+    }, [selType, selSubtype, selDim, productSubtypes]);
 
     // ── Cascading options ────────────────────────────────────
     const unique = (arr) => [...new Set(arr)].sort();
 
-    const typeOptions = unique(inventoryItems.map(i => i.sku_type));
-    const subtypeOptions = unique(
-        inventoryItems.filter(i => !selType || i.sku_type === selType).map(i => i.sku_subtype)
-    );
     const dimOptions = unique(
         inventoryItems
-            .filter(i => (!selType || i.sku_type === selType) && (!selSubtype || i.sku_subtype === selSubtype))
+            .filter(i => {
+                if (!selType || i.sku_type !== selType) return !selType;
+                if (!selSubtype) return true;
+                return i.sku_subtype === toRawSub(selSubtype);
+            })
             .map(i => i.sku_dim)
     );
 
     const handleTypeChange    = (v) => { setSelType(v); setSelSubtype(""); setSelDim(""); };
-    const handleSubtypeChange = (v) => { setSelSubtype(v); setSelDim(""); };
+    const handleSubtypeChange = (v) => { setSelSubtype(v); if (!hasDimensions) setSelDim("-"); else setSelDim(""); };
+
+    // Auto-set dim for dimensionless products (handles initial load / type switch)
+    useEffect(() => {
+        if (!hasDimensions && selType) setSelDim(d => d || "-");
+        else if (hasDimensions && selDim === "-") setSelDim("");
+    }, [hasDimensions, selType]);
 
     const resetProductFields = () =>
     {
@@ -168,7 +201,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const fullAddress = (c) => [c.address, c.city, c.state, c.pincode].filter(Boolean).join(", ");
 
     const isDirty = () =>
-        selectedCustomer !== null || cart.length > 0 ||
+        selectedCustomer !== null || customerQuery.trim() !== "" || cart.length > 0 ||
         selType !== "" || totalUnitsSelected > 0 || sellingPrice.trim() !== "";
 
     useEffect(() =>
@@ -179,14 +212,32 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             setPendingClose(() => doClose);
             setCancelConfirm(true);
         });
-    }, [selectedCustomer, cart, selType, selSubtype, selDim, totalUnitsSelected, sellingPrice]);
+    }, [selectedCustomer, customerQuery, cart, selType, selSubtype, selDim, totalUnitsSelected, sellingPrice]);
 
-    const handleCustomerSelect = (e) =>
+    const handleCustomerSelect = async (e) =>
     {
-        const id = parseInt(e.target.value, 10);
-        const found = customers.find(c => c.customer_id === id) || null;
+        const value = e.target.value;
+        const found = customers.find(c => fullName(c) === value) || null;
+        setCustomerQuery(value);
         setSelectedCustomer(found);
-        setShippingAddress(found ? fullAddress(found) : "");
+        if (found) {
+            try {
+                const addrs = await getShippingAddresses(found.customer_id);
+                setShippingOptions(addrs);
+                const defaultAddr = addrs.find(a => a.is_default) || addrs[0];
+                if (defaultAddr) {
+                    setShippingAddress([defaultAddr.address, defaultAddr.city, defaultAddr.state, defaultAddr.pincode].filter(Boolean).join(", "));
+                } else {
+                    setShippingAddress(fullAddress(found));
+                }
+            } catch {
+                setShippingOptions([]);
+                setShippingAddress(fullAddress(found));
+            }
+        } else {
+            setShippingOptions([]);
+            setShippingAddress("");
+        }
     };
 
     const allFiltersSet   = selType && selSubtype && selDim;
@@ -219,7 +270,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             .filter(s => (unitCounts[s.sku_id] || 0) > 0)
             .map(s => ({
                 sku_type:     selType,
-                sku_subtype:  selSubtype,
+                sku_subtype:  toRawSub(selSubtype),
                 sku_dim:      selDim,
                 sku_id:       s.sku_id,
                 quantity:     unitCounts[s.sku_id],
@@ -229,7 +280,21 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             }));
 
         setProductErrors({});
-        setCart(prev => [...prev, ...newItems]);
+        setCart(prev => {
+            const updated = [...prev];
+            for (const item of newItems) {
+                const existing = updated.find(c =>
+                    c.sku_id === item.sku_id && c.sellingPrice === item.sellingPrice
+                );
+                if (existing) {
+                    existing.quantity += item.quantity;
+                    existing.skuUnits = Math.max(existing.skuUnits, existing.quantity);
+                } else {
+                    updated.push(item);
+                }
+            }
+            return updated;
+        });
         resetProductFields();
     };
 
@@ -243,7 +308,11 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     {
         const errors = {};
         if (!selectedCustomer)       errors.customer = "Customer is required";
-        if (!shippingAddress.trim()) errors.shipping = "Shipping address is required";
+        if (isCustomShip) {
+            if (!customShip.address.trim()) errors.shipping = "Shipping address is required";
+        } else {
+            if (!shippingAddress.trim()) errors.shipping = "Shipping address is required";
+        }
         if (cart.length === 0)       errors.cart     = "Add at least one item to the cart";
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
@@ -262,13 +331,19 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                 await deleteOrder(editingOrder.order_id);
             }
 
+            // Build final shipping address
+            const finalShipAddr = isCustomShip
+                ? [customShip.address, customShip.city, customShip.state, customShip.pincode].filter(Boolean).join(", ")
+                : shippingAddress;
+
             await placeOrder({
                 customer_id:      selectedCustomer.customer_id,
                 order_date:       new Date().toISOString().split("T")[0],
-                shipping_address: shippingAddress,
+                shipping_address: finalShipAddr,
                 total_units:      cartTotalUnits,
                 total_qty:        cartTotalQty,
                 total_amount:     cartTotalAmount,
+                delivery_charge:  parseFloat(deliveryCharge) || 0,
                 lines: cart.map(item => ({
                     sku_type:      item.sku_type,
                     sku_subtype:   item.sku_subtype,
@@ -277,6 +352,15 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                     selling_price: item.sellingPrice
                 }))
             });
+            // If custom shipping address was used, save it for future use
+            if (isCustomShip && selectedCustomer && customShip.address.trim()) {
+                try {
+                    const { updateShippingAddresses } = await import("../api");
+                    const existing = shippingOptions.map(a => ({ address: a.address, pincode: a.pincode, city: a.city, state: a.state, is_default: a.is_default }));
+                    existing.push({ address: customShip.address, pincode: customShip.pincode ? parseInt(customShip.pincode) : null, city: customShip.city, state: customShip.state, is_default: false });
+                    await updateShippingAddresses(selectedCustomer.customer_id, existing);
+                } catch {} // non-critical
+            }
             if (clearEditingOrder) clearEditingOrder();
             if (onOrderSuccess) onOrderSuccess();
             resetAllState();
@@ -289,10 +373,15 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const resetAllState = () =>
     {
         setSelectedCustomer(null);
+        setCustomerQuery("");
         setShippingAddress("");
         setSelType(""); setSelSubtype(""); setSelDim("");
         setAvailSkus(null); setUnitCounts({});
         setSellingPrice("");
+        setDeliveryCharge("");
+        setIsCustomShip(false);
+        setCustomShip({ address: "", pincode: "", city: "", state: "" });
+        setShippingOptions([]);
         setFieldErrors({}); setProductErrors({}); setApiError("");
         setCart([]);   // clear shared cart too
     };
@@ -353,12 +442,13 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                 <div className="customer-grid">
 
                     <label>Customer Name :</label>
-                    <select value={selectedCustomer ? selectedCustomer.customer_id : ""} onChange={handleCustomerSelect}>
-                        <option value="">-- Select Customer --</option>
-                        {customers.map(c => (
-                            <option key={c.customer_id} value={c.customer_id}>{fullName(c)}</option>
-                        ))}
-                    </select>
+                    <ComboInput
+                        value={customerQuery}
+                        onChange={handleCustomerSelect}
+                        options={customers.map(c => fullName(c))}
+                        placeholder="Customer Name..."
+                        id="po-customer"
+                    />
 
                     <label>Contact :</label>
                     <input value={selectedCustomer?.contact || ""} placeholder="Contact" readOnly />
@@ -373,13 +463,46 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                     <input value={selectedCustomer ? fullAddress(selectedCustomer) : ""} placeholder="Billing Address" readOnly />
 
                     <label>Shipping Address :</label>
-                    <input
-                        value={shippingAddress}
-                        placeholder="Shipping Address"
-                        onChange={(e) => setShippingAddress(e.target.value)}
-                    />
+                    {shippingOptions.length > 0 ? (
+                        <select value={isCustomShip ? "__custom__" : shippingAddress}
+                            onChange={(e) => {
+                                if (e.target.value === "__custom__") {
+                                    setIsCustomShip(true);
+                                    setShippingAddress("");
+                                    setCustomShip({ address: "", pincode: "", city: "", state: "" });
+                                } else {
+                                    setIsCustomShip(false);
+                                    setShippingAddress(e.target.value);
+                                }
+                            }}>
+                            {shippingOptions.map((a, i) => {
+                                const val = [a.address, a.city, a.state, a.pincode].filter(Boolean).join(", ");
+                                return <option key={i} value={val}>{val}{a.is_default ? " (Default)" : ""}</option>;
+                            })}
+                            <option value="__custom__">-- Custom --</option>
+                        </select>
+                    ) : (
+                        <input
+                            value={shippingAddress}
+                            placeholder="Shipping Address"
+                            onChange={(e) => setShippingAddress(e.target.value)}
+                        />
+                    )}
 
                 </div>
+                {isCustomShip && (
+                    <div className="custom-ship-fields">
+                        <label className="custom-ship-label">Shipping Address</label>
+                        <div className="custom-ship-row">
+                            <input value={customShip.address} onChange={e => setCustomShip(p => ({ ...p, address: e.target.value }))} placeholder="Building / Area" style={{ flex: 2 }} />
+                            <input value={customShip.pincode} onChange={e => setCustomShip(p => ({ ...p, pincode: e.target.value }))} placeholder="Pincode" style={{ flex: 1 }} />
+                        </div>
+                        <div className="custom-ship-row">
+                            <input value={customShip.city} onChange={e => setCustomShip(p => ({ ...p, city: e.target.value }))} placeholder="City" />
+                            <input value={customShip.state} onChange={e => setCustomShip(p => ({ ...p, state: e.target.value }))} placeholder="State" />
+                        </div>
+                    </div>
+                )}
                 {fieldErrors.customer && <p className="order-field-error">{fieldErrors.customer}</p>}
                 {fieldErrors.shipping && <p className="order-field-error">{fieldErrors.shipping}</p>}
             </div>
@@ -398,19 +521,23 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                     <div className="sku-cascade-field">
                         <label>SKU Type :</label>
                         <ComboInput value={selType} onChange={(e) => handleTypeChange(e.target.value)}
-                            options={productTypes} placeholder="Type…" id="po-type" />
+                            options={productTypes} placeholder="Type..." id="po-type" />
                     </div>
                     <div className="sku-cascade-field">
                         <label>SKU Sub Type :</label>
                         <ComboInput value={selSubtype} onChange={(e) => handleSubtypeChange(e.target.value)}
-                            options={productSubtypes.map(s => s.display_subtype)} placeholder="SubType…" id="po-subtype" />
+                            options={productSubtypes.map(s => s.display_subtype)} placeholder="SubType..." id="po-subtype"
+                            disabled={!selType} />
                     </div>
                     <div className="sku-cascade-field">
                         <label>Dimensions :</label>
-                        <select value={selDim} onChange={(e) => setSelDim(e.target.value)} disabled={!selSubtype}>
-                            <option value="">-- Select --</option>
-                            {dimOptions.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
+                        {hasDimensions ? (
+                            <ComboInput value={selDim} onChange={(e) => setSelDim(e.target.value)}
+                                options={dimOptions} placeholder="Dimensions..." id="po-dim"
+                                disabled={!selSubtype} />
+                        ) : (
+                            <input value="-" disabled />
+                        )}
                     </div>
                 </div>
 
@@ -445,6 +572,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                                     <thead>
                                         <tr>
                                             <th>SKU ID</th>
+                                            <th>Dim</th>
                                             <th className="th-qty">Quantity / Unit (kgs)</th>
                                             <th className="th-price">Cost Price (Rs.)</th>
                                             <th className="th-center">Units</th>
@@ -460,6 +588,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                                             return (
                                                 <tr key={s.sku_id}>
                                                     <td>{s.sku_id}</td>
+                                                    <td>{s.sku_dim}</td>
                                                     <td className="td-qty">{parseFloat(s.sku_quantity).toFixed(3)}</td>
                                                     <td className="td-price">{parseFloat(s.sku_cost_price).toFixed(2)}</td>
                                                     <td className="td-center">{maxUnits}</td>
@@ -493,7 +622,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                             <input
                                 type="number"
                                 min="0"
-                                step="0.01"
+                                step="1"
                                 placeholder="0.00"
                                 value={sellingPrice}
                                 onChange={(e) => setSellingPrice(e.target.value)}
@@ -523,9 +652,9 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                             <tr>
                                 <th>Type</th>
                                 <th>Sub Type</th>
-                                <th>Dimensions (mm)</th>
+                                <th>Dim (mm)</th>
                                 <th className="th-qty">Units</th>
-                                <th className="th-qty">Quantity / Unit (kgs)</th>
+                                <th className="th-qty">Qty (kgs)</th>
                                 <th className="th-price">Rate (Rs./kg)</th>
                                 <th className="th-price">Subtotal (Rs.)</th>
                                 <th></th>
@@ -542,11 +671,35 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                                     <td>{item.sku_dim}</td>
                                     <td className="td-qty">{item.quantity}</td>
                                     <td className="td-qty">{(item.skuQuantity).toFixed(3)}</td>
-                                    <td className="td-price">{item.sellingPrice.toFixed(2)}</td>
+                                    <td className="td-price">
+                                        <input type="number" min="0" step="1.00"
+                                            value={item.sellingPrice.toFixed(2)}
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val)) setCart(prev => prev.map((it, i) => i === index ? { ...it, sellingPrice: val } : it));
+                                            }}
+                                            style={{ width: 75, padding: "4px 6px", border: "1px solid #ccc", borderRadius: 4, textAlign: "right" }}
+                                        />
+                                    </td>
                                     <td className="td-price">{subtotal.toFixed(2)}</td>
                                     <td>
-                                        <button className="cart-remove-btn"
-                                            onClick={() => setCart(prev => prev.filter((_, i) => i !== index))}>✕</button>
+                                        <div className="cart-stepper">
+                                            <button className="stepper-btn stepper-minus"
+                                                onClick={() => {
+                                                    if (item.quantity <= 1) {
+                                                        setCart(prev => prev.filter((_, i) => i !== index));
+                                                    } else {
+                                                        setCart(prev => prev.map((it, i) => i === index ? { ...it, quantity: it.quantity - 1 } : it));
+                                                    }
+                                                }}>−</button>
+                                            <span className="stepper-val">{item.quantity}</span>
+                                            <button className="stepper-btn stepper-plus"
+                                                onClick={() => {
+                                                    setCart(prev => prev.map((it, i) => i === index ? { ...it, quantity: it.quantity + 1 } : it));
+                                                }} disabled={item.quantity >= item.skuUnits}>+</button>
+                                            <button className="cart-remove-btn"
+                                                onClick={() => setCart(prev => prev.filter((_, i) => i !== index))}>✕</button>
+                                        </div>
                                     </td>
                                 </tr>
                                 );
@@ -567,6 +720,17 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             </div>
 
             <div className="place-order-buttons">
+                <div className="delivery-charge-field">
+                    <label>Delivery Charge (Rs.) :</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0.00"
+                        value={deliveryCharge}
+                        onChange={(e) => setDeliveryCharge(e.target.value)}
+                    />
+                </div>
                 <button className="cancel-btn" onClick={handleCancelClick}>Cancel</button>
                 <button className="submit-btn" onClick={handleSubmitClick}>Submit</button>
             </div>

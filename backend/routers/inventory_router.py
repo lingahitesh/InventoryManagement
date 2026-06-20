@@ -8,7 +8,6 @@ from backend.schemas.inventory_schema import InventoryCreate, InventoryUpdate
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
-
 @router.post("")
 def create_inventory(inv: InventoryCreate):
     new_id = add_inventory(

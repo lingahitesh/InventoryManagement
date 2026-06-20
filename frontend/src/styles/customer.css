@@ -552,3 +552,118 @@
 .customer-table td:nth-child(7) { width: 12%; }  /* Actions */
 
 
+
+
+/* ── Multi-value fields ── */
+.row-fields-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.multi-field-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.multi-field-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.multi-field-row input:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+.multi-remove {
+    background: #ffebee;
+    color: #c62828;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.multi-remove:hover { background: #ffcdd2; }
+
+.multi-add-btn {
+    background: none;
+    border: 1px dashed #999;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.multi-add-btn:hover { background: #f5f5f5; border-color: #666; }
+
+/* ── Shipping address card ── */
+.shipping-addr-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fafbff;
+}
+
+.sa-header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.sa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+}
+
+.sa-checkbox input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
+
+.sa-fields { display: flex; flex-direction: column; gap: 6px; }
+
+.sa-fields textarea,
+.sa-fields input {
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: border-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sa-fields textarea:focus,
+.sa-fields input:focus { outline: none; border-color: #4fc3f7; }
+
+.sa-fields textarea:disabled,
+.sa-fields input:disabled { background: #f5f5f5; color: #999; }
+
+.sa-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+}
+
+
+.row-fields-side {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+}

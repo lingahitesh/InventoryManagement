@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { getProductTypes, getProductSubtypes } from "../api";
 
 /**
- * Hook to load product types and subtypes from master CSV.
+ * Hook to load product types and subtypes from PRODUCT_MASTER.
  * When selectedType changes, subtypes are refetched for that type.
- * Returns: { types, subtypes, loadingTypes, loadingSubtypes }
+ * Returns: { types, subtypes, hasDimensions, loadingTypes, loadingSubtypes }
  */
 export function useProductMaster(selectedType)
 {
-    const [types,           setTypes]           = useState([]);
+    const [typesRaw,        setTypesRaw]        = useState([]);
     const [subtypes,        setSubtypes]        = useState([]);
     const [loadingTypes,    setLoadingTypes]    = useState(true);
     const [loadingSubtypes, setLoadingSubtypes] = useState(false);
@@ -18,8 +18,8 @@ export function useProductMaster(selectedType)
     {
         setLoadingTypes(true);
         getProductTypes()
-            .then(data => setTypes(data))
-            .catch(() => setTypes([]))
+            .then(data => setTypesRaw(data))
+            .catch(() => setTypesRaw([]))
             .finally(() => setLoadingTypes(false));
     }, []);
 
@@ -34,5 +34,18 @@ export function useProductMaster(selectedType)
             .finally(() => setLoadingSubtypes(false));
     }, [selectedType]);
 
-    return { types, subtypes, loadingTypes, loadingSubtypes };
+    // Derive types list (strings) and hasDimensions flag for selected type
+    const types = typesRaw.map(t => t.type);
+    const hasDimensions = selectedType
+        ? (typesRaw.find(t => t.type === selectedType)?.has_dimensions ?? true)
+        : true;
+
+    // Helper: given a display subtype string, return raw subtype
+    const getRawSubtype = (displaySubtype) => {
+        const trimmed = (displaySubtype || "").trim();
+        const found = subtypes.find(s => s.display_subtype === trimmed);
+        return found ? found.raw_subtype : trimmed;
+    };
+
+    return { types, subtypes, hasDimensions, getRawSubtype, loadingTypes, loadingSubtypes };
 }

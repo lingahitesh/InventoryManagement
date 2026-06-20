@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../styles/inventory-feeding.css";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { addInventory, updateInventoryItem, getNextSkuId } from "../api";
@@ -25,7 +25,7 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
 
     const [formData,      setFormData]      = useState({ ...freshForm(), skuId: "…" });
 
-    const { types: productTypes, subtypes: productSubtypes } = useProductMaster(formData.skuType);
+    const { types: productTypes, subtypes: productSubtypes, hasDimensions, getRawSubtype, loadingSubtypes } = useProductMaster(formData.skuType);
 
     // Fetch the next sku_id from the sequence on mount
     const loadNextId = () => {
@@ -47,6 +47,7 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
     {
         if (editRecord)
         {
+            userChangedType.current = false;
             // entry_date comes back as ISO string e.g. "2025-06-04T14:32:00"
             const rawDt   = editRecord.entry_date || "";
             const datePart = rawDt ? rawDt.slice(0, 10) : "";
@@ -69,9 +70,27 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
         }
         else
         {
+            userChangedType.current = true;
             setFormData(prev => ({ ...freshForm(), skuId: "Auto" }));
         }
     }, [editRecord]);
+
+    // Auto-set dim to "-" for dimensionless types (inks, solvents, adhesives)
+    // Only auto-change dim when user actively selects type (not on initial edit load)
+    const userChangedType = useRef(false);
+    const origHandleChange = (e) => {
+        if (e.target.name === "skuType") userChangedType.current = true;
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    useEffect(() => {
+        if (!userChangedType.current) return;
+        if (!hasDimensions) {
+            setFormData(prev => ({ ...prev, skuDim: "-" }));
+        } else if (formData.skuDim === "-") {
+            setFormData(prev => ({ ...prev, skuDim: "" }));
+        }
+    }, [hasDimensions]);
 
     const isDirty = () =>
         formData.skuType.trim()    !== "" ||
@@ -91,8 +110,7 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
         });
     }, [formData]);
 
-    const handleChange = (e) =>
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = origHandleChange;
 
     const validate = () =>
     {
@@ -132,7 +150,7 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
 
         const payload = {
             sku_type:       formData.skuType,
-            sku_subtype:    formData.skuSubType,
+            sku_subtype:    (productSubtypes.find(s => s.display_subtype === formData.skuSubType || s.raw_subtype === formData.skuSubType)?.raw_subtype) || formData.skuSubType,
             sku_dim:        formData.skuDim,
             sku_quantity:   parseFloat(formData.skuQuantity),
             sku_cost_price: parseFloat(formData.skuRate),
@@ -244,7 +262,8 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
                     </div>
                     <div className="feed-field">
                         <label>SKU Dimensions :</label>
-                        <input name="skuDim" value={formData.skuDim} onChange={handleChange} />
+                        <input name="skuDim" value={formData.skuDim} onChange={handleChange}
+                            disabled={!hasDimensions || viewOnly} placeholder={hasDimensions ? "e.g. 12x20" : "-"} />
                         {fieldErrors.skuDim && <span className="field-error">{fieldErrors.skuDim}</span>}
                     </div>
                 </div>

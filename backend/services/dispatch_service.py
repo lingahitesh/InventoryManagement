@@ -2,36 +2,34 @@ from fastapi import HTTPException
 from backend.database.db import get_db
 
 
-def create_dispatch(tracking_id, dispatched_through, dispatch_doc_no,
-                    delivery_note_date, buyer_order_no, buyer_order_date,
-                    other_references, payment_mode, delivery_date, items):
+def create_dispatch(dispatched_through, items):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        # Calculate total quantity from dispatched units
-        total_qty = sum(i.units_dispatched for i in items)
+        total_units = sum(i.units_dispatched for i in items)
 
         dispatch_id_var = cursor.var(int)
         cursor.execute("""
             INSERT INTO dispatches
-                (dispatch_id, tracking_id, dispatched_through, dispatch_doc_no,
-                 delivery_note_date, buyer_order_no, buyer_order_date,
-                 other_references, payment_mode, delivery_date, total_quantity)
+                (dispatch_id, dispatched_through, total_units)
             VALUES
-                (dispatch_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8, :9, :10)
-            RETURNING dispatch_id INTO :11
-        """, [tracking_id, dispatched_through, dispatch_doc_no,
-              delivery_note_date, buyer_order_no, buyer_order_date,
-              other_references, payment_mode, delivery_date, total_qty, dispatch_id_var])
+                (dispatch_seq.NEXTVAL, :1, :2)
+            RETURNING dispatch_id INTO :3
+        """, [dispatched_through, total_units, dispatch_id_var])
         dispatch_id = dispatch_id_var.getvalue()[0]
 
         for item in items:
             cursor.execute("""
                 INSERT INTO dispatch_items
-                    (dispatch_item_id, dispatch_id, order_id, order_item_id, units_dispatched)
+                    (dispatch_item_id, dispatch_id, order_id, order_item_id, units_dispatched,
+                     payment_mode, dispatch_doc_no, delivery_note_date, delivery_date,
+                     buyer_order_no, buyer_order_date, other_references)
                 VALUES
-                    (dispatch_item_seq.NEXTVAL, :1, :2, :3, :4)
-            """, [dispatch_id, item.order_id, item.order_item_id, item.units_dispatched])
+                    (dispatch_item_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11)
+            """, [dispatch_id, item.order_id, item.order_item_id, item.units_dispatched,
+                  item.payment_mode, item.dispatch_doc_no, item.delivery_note_date,
+                  item.delivery_date, item.buyer_order_no, item.buyer_order_date,
+                  item.other_references])
 
         conn.commit()
         return dispatch_id
@@ -48,25 +46,21 @@ def get_dispatches():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT d.dispatch_id, d.tracking_id, d.dispatched_through,
-               d.dispatch_doc_no, d.delivery_note_date, d.buyer_order_no,
-               d.buyer_order_date, d.other_references, d.payment_mode,
-               d.delivery_date, d.total_quantity, d.created_at
+        SELECT d.dispatch_id, d.dispatched_through, d.total_units, d.created_at
         FROM dispatches d
         ORDER BY d.dispatch_id DESC
     """)
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    keys = ["dispatch_id", "tracking_id", "dispatched_through", "dispatch_doc_no",
-            "delivery_note_date", "buyer_order_no", "buyer_order_date",
-            "other_references", "payment_mode", "delivery_date", "total_quantity", "created_at"]
+    keys = ["dispatch_id", "dispatched_through", "total_units", "created_at"]
     result = []
     for row in rows:
         d = dict(zip(keys, row))
-        for k in ("delivery_note_date", "buyer_order_date", "delivery_date", "created_at"):
-            if d[k] and hasattr(d[k], "isoformat"):
-                d[k] = d[k].isoformat()
+        if d["created_at"] and hasattr(d["created_at"], "isoformat"):
+            d["created_at"] = d["created_at"].isoformat()
+        if d["total_units"] is not None:
+            d["total_units"] = int(d["total_units"])
         result.append(d)
     return result
 
@@ -78,12 +72,14 @@ def get_dispatch_items(dispatch_id):
         SELECT di.dispatch_item_id, di.order_id, di.order_item_id, di.units_dispatched,
                o.customer_id,
                c.fname || ' ' || NVL(c.mname || ' ', '') || c.lname AS customer_name,
-               i.sku_type, i.sku_subtype, i.sku_dim
+               inv.sku_type, inv.sku_subtype, inv.sku_dim,
+               di.payment_mode, di.dispatch_doc_no, di.delivery_note_date,
+               di.delivery_date, di.buyer_order_no, di.buyer_order_date, di.other_references
         FROM dispatch_items di
         JOIN orders o ON o.order_id = di.order_id
         JOIN customers c ON c.customer_id = o.customer_id
         JOIN order_items oi ON oi.item_id = di.order_item_id
-        JOIN inventory i ON i.sku_id = oi.sku_id
+        JOIN inventory inv ON inv.sku_id = oi.sku_id
         WHERE di.dispatch_id = :1
         ORDER BY di.dispatch_item_id
     """, [dispatch_id])
@@ -91,8 +87,19 @@ def get_dispatch_items(dispatch_id):
     cursor.close()
     conn.close()
     keys = ["dispatch_item_id", "order_id", "order_item_id", "units_dispatched",
-            "customer_id", "customer_name", "sku_type", "sku_subtype", "sku_dim"]
-    return [dict(zip(keys, r)) for r in rows]
+            "customer_id", "customer_name", "sku_type", "sku_subtype", "sku_dim",
+            "payment_mode", "dispatch_doc_no", "delivery_note_date",
+            "delivery_date", "buyer_order_no", "buyer_order_date", "other_references"]
+    result = []
+    for r in rows:
+        d = dict(zip(keys, r))
+        for k in ("delivery_note_date", "delivery_date", "buyer_order_date"):
+            if d[k] and hasattr(d[k], "isoformat"):
+                d[k] = d[k].isoformat()
+        if d["units_dispatched"] is not None:
+            d["units_dispatched"] = int(d["units_dispatched"])
+        result.append(d)
+    return result
 
 
 def get_order_items_for_dispatch(order_id):
@@ -101,8 +108,8 @@ def get_order_items_for_dispatch(order_id):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT oi.item_id, oi.sku_id, i.sku_type, i.sku_subtype, i.sku_dim,
-               oi.quantity AS total_units,
-               oi.quantity - NVL((
+               oi.units AS total_units,
+               oi.units - NVL((
                    SELECT SUM(di.units_dispatched)
                    FROM dispatch_items di
                    WHERE di.order_item_id = oi.item_id
@@ -118,3 +125,22 @@ def get_order_items_for_dispatch(order_id):
     keys = ["item_id", "sku_id", "sku_type", "sku_subtype", "sku_dim",
             "total_units", "remaining_units"]
     return [dict(zip(keys, r)) for r in rows]
+
+
+def delete_dispatch(dispatch_id):
+    """Delete a dispatch and its items. No inventory changes to revert (dispatch doesn't deduct inventory)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM dispatch_items WHERE dispatch_id = :1", [dispatch_id])
+        cursor.execute("DELETE FROM dispatches WHERE dispatch_id = :1", [dispatch_id])
+        rows = cursor.rowcount
+        conn.commit()
+        return rows
+    except Exception as e:
+        conn.rollback()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from backend.services.order_service import (
-    allocate_and_place_order, get_orders, update_order, get_order_items,
-    get_order_full, delete_order
+    allocate_and_place_order, get_orders, get_order_items,
+    get_order_full, delete_order,
 )
-from backend.schemas.order_schema import OrderCreate, OrderUpdate
+from backend.schemas.order_schema import OrderCreate
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -12,7 +12,8 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 def place_order(order: OrderCreate):
     order_id = allocate_and_place_order(
         order.customer_id, order.order_date, order.shipping_address,
-        order.total_units, order.total_qty, order.total_amount, order.lines
+        order.total_units, order.total_qty, order.total_amount,
+        order.delivery_charge, order.lines
     )
     return {"message": "Order Placed", "order_id": order_id}
 
@@ -20,14 +21,6 @@ def place_order(order: OrderCreate):
 @router.get("")
 def fetch_orders():
     return get_orders()
-
-
-@router.put("/{order_id}")
-def edit_order(order_id: int, body: OrderUpdate):
-    rows = update_order(order_id, body.shipping_address, body.order_date)
-    if rows == 0:
-        raise HTTPException(status_code=404, detail="Order not found")
-    return {"message": "Order Updated"}
 
 
 @router.get("/{order_id}/items")

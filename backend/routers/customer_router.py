@@ -3,27 +3,29 @@ from backend.services.customer_service import (
     add_customer,
     get_customers,
     update_customer,
-    delete_customer
+    delete_customer,
+    get_shipping_addresses,
+    set_customer_shipping_addresses
 )
 from backend.schemas.customer_schema import CustomerCreate
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
-KEYS = [
-    "customer_id", "fname", "mname", "lname",
-    "contact", "email", "address", "pincode",
-    "city", "state", "gst"
-]
-
-
-def row_to_dict(row):
-    return dict(zip(KEYS, row))
-
 
 @router.get("")
 def fetch_customers():
-    rows = get_customers()
-    return [row_to_dict(r) for r in rows]
+    return get_customers()
+
+
+@router.get("/{customer_id}/shipping-addresses")
+def fetch_shipping_addresses(customer_id: int):
+    return get_shipping_addresses(customer_id)
+
+
+@router.put("/{customer_id}/shipping-addresses")
+def update_shipping_addresses(customer_id: int, addresses: list[dict]):
+    set_customer_shipping_addresses(customer_id, addresses)
+    return {"message": "Shipping addresses updated"}
 
 
 @router.post("")
@@ -40,6 +42,15 @@ def create_customer(customer: CustomerCreate):
         customer.city,
         customer.gst
     )
+    # If shipping addresses provided, get the new customer_id and save them
+    if customer.shipping_addresses:
+        customers = get_customers()
+        new_cust = customers[-1] if customers else None
+        if new_cust:
+            set_customer_shipping_addresses(
+                new_cust["customer_id"],
+                [a.model_dump() for a in customer.shipping_addresses]
+            )
     return {"message": "Customer Added"}
 
 
@@ -60,6 +71,12 @@ def edit_customer(customer_id: int, customer: CustomerCreate):
     )
     if rows_affected == 0:
         raise HTTPException(status_code=404, detail="Customer not found")
+    # Update shipping addresses if provided
+    if customer.shipping_addresses is not None:
+        set_customer_shipping_addresses(
+            customer_id,
+            [a.model_dump() for a in customer.shipping_addresses]
+        )
     return {"message": "Customer Updated"}
 
 

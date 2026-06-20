@@ -38,13 +38,15 @@ function App()
 
     const getCartReserved = useCallback((sku_type, sku_subtype, sku_dim) =>
         cart
-            .filter(i => i.sku_type === sku_type && i.sku_subtype === sku_subtype && i.sku_dim === sku_dim)
+            .filter(i => i.sku_type === sku_type && i.sku_subtype === sku_subtype && i.sku_dim === sku_dim && !i.fromEdit)
             .reduce((sum, i) => sum + i.quantity, 0),
     [cart]);
 
     // ── Edit inventory state ─────────────────────────────────
     const [orderPrefill, setOrderPrefill] = useState(null);
     const [editingOrder, setEditingOrder] = useState(null);
+    const [orderRefreshKey, setOrderRefreshKey] = useState(0);
+    const [inventoryRefreshKey, setInventoryRefreshKey] = useState(0);
 
     // ── Tabs ─────────────────────────────────────────────────
     const [tabs,      setTabs]      = useState([{ id: "home", title: "Home" }]);
@@ -159,6 +161,7 @@ function App()
                             setOrderPrefill({ type, subtype, dim });
                             setShowOrderModal(true);
                         }}
+                        refreshKey={inventoryRefreshKey}
                     />
                     {/* Feeding overlay on Inventory tab */}
                     {showFeedingModal && (
@@ -170,7 +173,7 @@ function App()
                                 registerCloseGuard={() => {}}
                                 editRecord={editingInventoryRecord}
                                 clearEditRecord={() => setEditingInventoryRecord(null)}
-                                onSubmitSuccess={() => { refreshInventory(); setShowFeedingModal(false); setEditingInventoryRecord(null); }}
+                                onSubmitSuccess={() => { refreshInventory(); setShowFeedingModal(false); setEditingInventoryRecord(null); setInventoryRefreshKey(k => k + 1); }}
                             />
                         </ModalOverlay>
                     )}
@@ -202,6 +205,8 @@ function App()
                     <OrderList
                         onEditOrder={(order) => { setEditingOrder(order); setShowOrderModal(true); }}
                         onNewOrder={() => setShowOrderModal(true)}
+                        refreshKey={orderRefreshKey}
+                        onOrderDelete={() => { refreshInventory(); setInventoryRefreshKey(k => k + 1); }}
                     />
                     {/* Place Order overlay on Order List tab */}
                     {showOrderModal && (
@@ -217,7 +222,7 @@ function App()
                                 clearOrderPrefill={() => setOrderPrefill(null)}
                                 editingOrder={editingOrder}
                                 clearEditingOrder={() => setEditingOrder(null)}
-                                onOrderSuccess={() => { refreshInventory(); setCart([]); setEditingOrder(null); setShowOrderModal(false); }}
+                                onOrderSuccess={() => { refreshInventory(); setCart([]); setEditingOrder(null); setShowOrderModal(false); setOrderRefreshKey(k => k + 1); setInventoryRefreshKey(k => k + 1); }}
                             />
                         </ModalOverlay>
                     )}
@@ -225,7 +230,7 @@ function App()
 
                 {/* ── Dispatch ── */}
                 <div style={{ display: activeTab === "dispatch" ? "block" : "none" }}>
-                    <Dispatch />
+                    <Dispatch onDispatchSuccess={() => setOrderRefreshKey(k => k + 1)} />
                 </div>
 
             </div>

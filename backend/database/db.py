@@ -128,7 +128,7 @@ def init_db():
                 item_id NUMBER PRIMARY KEY,
                 order_id NUMBER NOT NULL,
                 sku_id NUMBER NOT NULL,
-                quantity NUMBER NOT NULL,
+                units NUMBER NOT NULL,
                 selling_price NUMBER(9,2),
                 CONSTRAINT fk_order_items_order
                 FOREIGN KEY(order_id)

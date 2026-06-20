@@ -60,6 +60,8 @@ export const getCustomers    = ()         => request("GET",    "/customers");
 export const addCustomer     = (data)     => request("POST",   "/customers", data);
 export const updateCustomer  = (id, data) => request("PUT",    `/customers/${id}`, data);
 export const deleteCustomer  = (id)       => request("DELETE", `/customers/${id}`);
+export const getShippingAddresses = (id)  => request("GET",    `/customers/${id}/shipping-addresses`);
+export const updateShippingAddresses = (id, addrs) => request("PUT", `/customers/${id}/shipping-addresses`, addrs);
 
 // ── Orders ─────────────────────────────────────────────────
 export const placeOrder = (data) => request("POST", "/orders", data);
@@ -67,7 +69,7 @@ export const placeOrder = (data) => request("POST", "/orders", data);
 // ── Orders (extended) ──────────────────────────────────────
 export const getOrders      = ()         => request("GET", "/orders");
 export const getOrderFull   = (id)       => request("GET", `/orders/${id}`);
-export const updateOrder    = (id, data) => request("PUT", `/orders/${id}`, data);
+
 export const deleteOrder    = (id)       => request("DELETE", `/orders/${id}`);
 export const getOrderItems  = (id)       => request("GET", `/orders/${id}/items`);
 
@@ -81,5 +83,6 @@ export const getProductSubtypes = (type) => {
 // ── Dispatches ─────────────────────────────────────────────
 export const getDispatches         = ()     => request("GET", "/dispatches");
 export const createDispatch        = (data) => request("POST", "/dispatches", data);
+export const deleteDispatch        = (id)   => request("DELETE", `/dispatches/${id}`);
 export const getDispatchItems      = (id)   => request("GET", `/dispatches/${id}/items`);
 export const getOrderItemsForDispatch = (orderId) => request("GET", `/dispatches/order-items/${orderId}`);

@@ -6,7 +6,7 @@ class CartLine(BaseModel):
     sku_type:      str
     sku_subtype:   str
     sku_dim:       str
-    quantity:      float
+    units:         int
     selling_price: float
 
 
@@ -17,4 +17,5 @@ class OrderCreate(BaseModel):
     total_units:      int
     total_qty:        float
     total_amount:     float
+    delivery_charge:  float = 0.0
     lines:            list[CartLine]

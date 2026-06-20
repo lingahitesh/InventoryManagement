@@ -35,7 +35,6 @@ def _num_to_words(n):
     ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
             "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen",
             "Seventeen","Eighteen","Nineteen"]
-    tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"]
     n = int(n)
     if n == 0: return "Zero"
     result = ""
@@ -105,8 +104,8 @@ def _draw_header(pdf, order, customer, date_str):
     pdf.set_xy(32, 190)
     ship_parts = order["shipping_address"].split(",") if order.get("shipping_address") else []
     addr_line = ", ".join(p.strip() for p in ship_parts[:-2]) if len(ship_parts) > 2 else order.get("shipping_address", "")
-    state_line = ", ".join(p.strip() for p in ship_parts[-2:]) if len(ship_parts) > 2 else ""
-    buyer_text = f"Buyer (Bill To)\n{name}\n{addr_line}\nGSTIN/UIN      : {customer['gst']}\nState Name     : {state_line}"
+    state_line = [p.strip() for p in ship_parts[-2:]] if len(ship_parts) > 2 else []
+    buyer_text = f"Buyer (Bill To)\n{name}\n{addr_line}\nGSTIN/UIN      : {customer['gst']}\nState Name     : {state_line[0] if len(state_line) > 0 else ""}, Code : {state_line[1] if len(state_line) > 0 else ""}"
     pdf.set_font("Helvetica", "", 7.5 if len(buyer_text) > 150 else 8)
     pdf.multi_cell(298, 9 if len(buyer_text) > 150 else 10, buyer_text)
 
@@ -183,25 +182,79 @@ def generate_invoice_pdf(order_id) -> bytes:
         price = float(item.get("selling_price") or 0)
         qty_kgs = units * batch_kg
         amount = qty_kgs * price
-        grand_total_qty += qty_kgs
-        grand_total_amt += amount
 
         sku_type = item.get("sku_type") or ""
         sku_subtype = item.get("sku_subtype") or ""
         sku_dim = item.get("sku_dim") or ""
         hsn = _get_hsn(sku_type, sku_subtype)
-        hsn_groups[hsn] = hsn_groups.get(hsn, 0) + amount
 
         desc = f"{sku_type} FILM {'METALIZED' if 'MET' in sku_type.upper() else 'PLAIN'}"
-        item_data.append({
-            "units": units, "desc": desc, "hsn": hsn,
-            "qty_kgs": qty_kgs, "price": price, "amount": amount,
-            "sku_type": sku_type, "sku_dim": sku_dim, "batch_kg": batch_kg
-        })
 
-    sgst = round(grand_total_amt * 0.09, 2)
-    cgst = round(grand_total_amt * 0.09, 2)
-    total_with_tax = grand_total_amt + sgst + cgst
+        # Merge key: same description + hsn (same product category heading)
+        merge_key = (desc, hsn)
+        found = False
+        for existing in item_data:
+            if existing["_merge_key"] == merge_key:
+                existing["units"] += units
+                existing["qty_kgs"] += qty_kgs
+                existing["amount"] += amount
+                # Try to merge into an existing sub-line with same dim+batch_kg+price
+                sub_key = (sku_type, sku_dim, batch_kg, price)
+                merged_sub = False
+                for sub in existing["sub_lines"]:
+                    if sub["key"] == sub_key:
+                        sub["units"] += units
+                        sub["qty_kgs"] += qty_kgs
+                        sub["amount"] += amount
+                        merged_sub = True
+                        break
+                if not merged_sub:
+                    existing["sub_lines"].append({
+                        "key": sub_key, "sku_type": sku_type, "sku_dim": sku_dim,
+                        "batch_kg": batch_kg, "units": units, "price": price,
+                        "qty_kgs": qty_kgs, "amount": amount
+                    })
+                found = True
+                break
+        if not found:
+            item_data.append({
+                "units": units, "desc": desc, "hsn": hsn,
+                "qty_kgs": qty_kgs, "price": price, "amount": amount,
+                "sku_type": sku_type, "sku_dim": sku_dim, "batch_kg": batch_kg,
+                "sub_lines": [{
+                    "key": (sku_type, sku_dim, batch_kg, price), "sku_type": sku_type,
+                    "sku_dim": sku_dim, "batch_kg": batch_kg, "units": units,
+                    "price": price, "qty_kgs": qty_kgs, "amount": amount
+                }],
+                "_merge_key": merge_key
+            })
+
+        grand_total_qty += qty_kgs
+        grand_total_amt += amount
+        hsn_groups[hsn] = hsn_groups.get(hsn, 0) + amount
+
+    delivery_charge = float(order.get("delivery_charge") or 0)
+    taxable_amount = grand_total_amt + delivery_charge
+
+    # Add delivery charge to HSN groups if present
+    if delivery_charge > 0:
+        hsn_groups["996511"] = hsn_groups.get("996511", 0) + delivery_charge
+
+    # Determine tax type: IGST (inter-state) vs CGST+SGST (intra-state / West Bengal)
+    shipping_addr = (order.get("shipping_address") or "").lower()
+    is_intra_state = "west bengal" in shipping_addr
+
+    if is_intra_state:
+        sgst = round(taxable_amount * 0.09, 2)
+        cgst = round(taxable_amount * 0.09, 2)
+        igst = 0
+        total_with_tax = taxable_amount + sgst + cgst
+    else:
+        sgst = 0
+        cgst = 0
+        igst = round(taxable_amount * 0.18, 2)
+        total_with_tax = taxable_amount + igst
+
     round_off = round(total_with_tax) - total_with_tax
     final_total = round(total_with_tax)
 
@@ -229,8 +282,8 @@ def generate_invoice_pdf(order_id) -> bytes:
             pdf.line(x, table_y, x, 750)
         y = table_y + 27
         for i in range(first_batch):
-            _draw_item_row(pdf, y, idx + 1, item_data[idx])
-            y += 30
+            row_h = _draw_item_row(pdf, y, idx + 1, item_data[idx])
+            y += row_h + 6
             idx += 1
         pdf.line(30, 735, 562, 735)
         pdf.set_xy(250, 752); pdf.set_font("Helvetica", "", 7)
@@ -247,8 +300,8 @@ def generate_invoice_pdf(order_id) -> bytes:
                 pdf.line(x, 248, x, 750)
             y = 275
             for i in range(ITEMS_PER_CONT_PAGE):
-                _draw_item_row(pdf, y, idx + 1, item_data[idx])
-                y += 30
+                row_h = _draw_item_row(pdf, y, idx + 1, item_data[idx])
+                y += row_h + 6
                 idx += 1
             pdf.line(30, 735, 562, 735)
             pdf.set_xy(250, 752); pdf.set_font("Helvetica", "", 7)
@@ -260,7 +313,8 @@ def generate_invoice_pdf(order_id) -> bytes:
         _draw_header(pdf, order, customer, date_str)
         table_y = 248
         remaining_items = total_items - idx
-        table_bottom = table_y + 24 + remaining_items * 30 + 80
+        remaining_height = sum(14 + len(item_data[i].get("sub_lines", [{"x":1}])) * 10 + 6 for i in range(idx, total_items))
+        table_bottom = table_y + 24 + remaining_height + 80
         if table_bottom < 480: table_bottom = 480
         pdf.rect(30, table_y, 532, table_bottom - table_y)
         _draw_table_header(pdf, table_y)
@@ -269,18 +323,21 @@ def generate_invoice_pdf(order_id) -> bytes:
 
         y = table_y + 27
         while idx < total_items:
-            _draw_item_row(pdf, y, idx + 1, item_data[idx])
-            y += 30
+            row_h = _draw_item_row(pdf, y, idx + 1, item_data[idx])
+            y += row_h + 6
             idx += 1
 
-        _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, round_off, final_total, hsn_groups, table_bottom)
+        _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, igst, round_off, final_total, hsn_groups, table_bottom, delivery_charge, is_intra_state)
 
     else:
         # Single page
         pdf.add_page()
         _draw_header(pdf, order, customer, date_str)
         table_y = 248
-        table_bottom = 550
+        # Calculate dynamic table height based on sub-lines
+        items_height = sum(14 + len(d.get("sub_lines", [{"x":1}])) * 10 + 6 for d in item_data)
+        table_bottom = table_y + 24 + items_height + 80
+        if table_bottom < 550: table_bottom = 550
         pdf.rect(30, table_y, 532, table_bottom - table_y)
         _draw_table_header(pdf, table_y)
         for x in [42, 95, 300, 353, 405, 459, 482]:
@@ -288,30 +345,49 @@ def generate_invoice_pdf(order_id) -> bytes:
 
         y = table_y + 27
         for idx, d in enumerate(item_data):
-            _draw_item_row(pdf, y, idx + 1, d)
-            y += 30
+            row_h = _draw_item_row(pdf, y, idx + 1, d)
+            y += row_h + 6
 
-        _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, round_off, final_total, hsn_groups, table_bottom)
+        _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, igst, round_off, final_total, hsn_groups, table_bottom, delivery_charge, is_intra_state)
 
     return pdf.output()
 
 
 def _draw_item_row(pdf, y, sl, d):
+    sub_lines = d.get("sub_lines", [])
+    has_single_price = len(sub_lines) == 1 or all(s["price"] == sub_lines[0]["price"] for s in sub_lines)
+
     pdf.set_font("Helvetica", "", 8)
     pdf.set_xy(30, y); pdf.cell(12, 14, str(sl), align="C")
     pdf.set_xy(44, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(50, 14, f"{d['units']:02d} ROLLS")
     pdf.set_xy(97, y); pdf.cell(200, 14, d["desc"])
     pdf.set_xy(302, y); pdf.set_font("Helvetica", "", 8); pdf.cell(50, 14, d["hsn"], align="C")
     pdf.set_xy(355, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(48, 14, f"{d['qty_kgs']:.3f} KGS", align="C")
-    pdf.set_xy(407, y); pdf.set_font("Helvetica", "", 8); pdf.cell(50, 14, f"{d['price']:.2f}", align="C")
-    pdf.set_xy(461, y); pdf.cell(20, 14, "KGS", align="C")
+    if has_single_price:
+        pdf.set_xy(407, y); pdf.set_font("Helvetica", "", 8); pdf.cell(50, 14, f"{sub_lines[0]['price']:.2f}", align="C")
+        pdf.set_xy(461, y); pdf.cell(20, 14, "KGS", align="C")
+    else:
+        pdf.set_xy(407, y); pdf.set_font("Helvetica", "", 8); pdf.cell(50, 14, "", align="C")
+        pdf.set_xy(461, y); pdf.cell(20, 14, "KGS", align="C")
     pdf.set_xy(484, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(76, 14, f"{d['amount']:,.2f}", align="R")
-    # Sub row
-    pdf.set_xy(97, y + 14); pdf.set_font("Helvetica", "", 7)
-    pdf.cell(200, 10, f'" {d["sku_type"]} {d["sku_dim"]} = {d["batch_kg"]:.3f}  {d["units"]}R "')
+
+    # Sub rows — one per variant
+    sub_y = y + 14
+    for sub in sub_lines:
+        pdf.set_xy(97, sub_y); pdf.set_font("Helvetica", "", 7)
+        line_text = f'" {sub["sku_type"]} {sub["sku_dim"]} = {sub["batch_kg"]:.3f}  {sub["units"]}R "'
+        pdf.cell(200, 10, line_text)
+        # Show per-sub-line rate and amount if multiple prices exist
+        if not has_single_price:
+            pdf.set_xy(407, sub_y); pdf.cell(50, 10, f"{sub['price']:.2f}", align="C")
+            pdf.set_xy(484, sub_y); pdf.cell(76, 10, f"{sub['amount']:,.2f}", align="R")
+        sub_y += 10
+
+    # Return total height used by this item row
+    return 14 + len(sub_lines) * 10
 
 
-def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, round_off, final_total, hsn_groups, table_bottom):
+def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, igst, round_off, final_total, hsn_groups, table_bottom, delivery_charge=0, is_intra_state=True):
     # Line before subtotal
     y = table_bottom - 80
     pdf.line(482, y, 562, y)
@@ -319,12 +395,25 @@ def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, r
     # Subtotal amount
     pdf.set_xy(484, y + 2); pdf.set_font("Helvetica", "B", 8); pdf.cell(76, 12, f"{grand_total_amt:,.2f}", align="R")
     y += 15
-    pdf.set_xy(200, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(100, 12, "SGST")
-    pdf.set_xy(484, y); pdf.cell(76, 12, f"{sgst:,.2f}", align="R")
-    y += 14
-    pdf.set_xy(200, y); pdf.cell(100, 12, "CGST")
-    pdf.set_xy(484, y); pdf.cell(76, 12, f"{cgst:,.2f}", align="R")
-    y += 14
+
+    # Delivery charge (only if > 0)
+    if delivery_charge > 0:
+        pdf.set_xy(200, y); pdf.set_font("Helvetica", "BI", 8); pdf.cell(100, 12, "DELIVERY CHARGE")
+        pdf.set_xy(484, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(76, 12, f"{delivery_charge:,.2f}", align="R")
+        y += 14
+
+    if is_intra_state:
+        pdf.set_xy(200, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(100, 12, "SGST")
+        pdf.set_xy(484, y); pdf.cell(76, 12, f"{sgst:,.2f}", align="R")
+        y += 14
+        pdf.set_xy(200, y); pdf.cell(100, 12, "CGST")
+        pdf.set_xy(484, y); pdf.cell(76, 12, f"{cgst:,.2f}", align="R")
+        y += 14
+    else:
+        pdf.set_xy(200, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(100, 12, "IGST")
+        pdf.set_xy(484, y); pdf.cell(76, 12, f"{igst:,.2f}", align="R")
+        y += 14
+
     pdf.set_xy(130, y); pdf.set_font("Helvetica", "I", 7); pdf.cell(50, 12, "Less :")
     pdf.set_xy(200, y); pdf.set_font("Helvetica", "B", 8); pdf.cell(100, 12, "ROUND OFF")
     ro = f"(-){abs(round_off):.2f}" if round_off < 0 else f"{round_off:.2f}"
@@ -343,7 +432,7 @@ def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, r
     pdf.cell(400, 12, f"Indian Rupees {_num_to_words(final_total)} Only")
     pdf.set_xy(500, table_bottom + 3); pdf.set_font("Helvetica", "I", 7); pdf.cell(60, 12, "E. & O.E", align="R")
 
-    # ── Tax table — fix #5: DYNAMIC height based on HSN count ──
+    # ── Tax table — DYNAMIC height, state-aware (IGST vs CGST+SGST) ──
     hsn_count = len(hsn_groups)
     tax_header_h = 24
     tax_row_h = 12
@@ -354,52 +443,92 @@ def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, r
     pdf.rect(30, tax_y, 532, tax_h)
     pdf.line(30, tax_y + tax_header_h, 562, tax_y + tax_header_h)
     pdf.line(30, tax_y + tax_h - tax_total_row_h, 562, tax_y + tax_h - tax_total_row_h)
-    pdf.line(250, tax_y, 250, tax_y + tax_h)
-    pdf.line(308, tax_y, 308, tax_y + tax_h)
-    pdf.line(345, tax_y + 12, 345, tax_y + tax_h)
-    pdf.line(403, tax_y, 403, tax_y + tax_h)
-    pdf.line(439, tax_y + 12, 439, tax_y + tax_h)
-    pdf.line(498, tax_y, 498, tax_y + tax_h)
-    pdf.line(308, tax_y + 12, 498, tax_y + 12)
 
-    pdf.set_xy(122, tax_y + 2); pdf.set_font("Helvetica", "B", 7); pdf.cell(100, 10, "HSN/SAC")
-    pdf.set_xy(261, tax_y + 2); pdf.multi_cell(55, 10, "Taxable\n  Value")
-    pdf.set_xy(342, tax_y + 2); pdf.cell(60, 10, "CGST")
-    pdf.set_xy(426, tax_y + 2); pdf.cell(70, 10, "SGST/UTGST")
-    pdf.set_xy(505, tax_y + 2); pdf.multi_cell(55, 10, "      Total\nTax Amount")
-    pdf.set_xy(318, tax_y + 14); pdf.set_font("Helvetica", "", 6); pdf.cell(25, 8, "Rate")
-    pdf.set_xy(362, tax_y + 14); pdf.cell(40, 8, "Amount")
-    pdf.set_xy(412, tax_y + 14); pdf.cell(25, 8, "Rate")
-    pdf.set_xy(454, tax_y + 14); pdf.cell(40, 8, "Amount")
+    if is_intra_state:
+        # CGST + SGST columns
+        pdf.line(250, tax_y, 250, tax_y + tax_h)
+        pdf.line(308, tax_y, 308, tax_y + tax_h)
+        pdf.line(345, tax_y + 12, 345, tax_y + tax_h)
+        pdf.line(403, tax_y, 403, tax_y + tax_h)
+        pdf.line(439, tax_y + 12, 439, tax_y + tax_h)
+        pdf.line(498, tax_y, 498, tax_y + tax_h)
+        pdf.line(308, tax_y + 12, 498, tax_y + 12)
 
-    row_y = tax_y + tax_header_h + 1
-    pdf.set_font("Helvetica", "", 7)
-    for hsn, taxable in hsn_groups.items():
-        c = round(taxable * 0.09, 2); s = round(taxable * 0.09, 2)
-        pdf.set_xy(122, row_y); pdf.cell(128, 10, hsn)
-        pdf.set_xy(252, row_y); pdf.cell(55, 10, f"{taxable:,.2f}", align="R")
-        pdf.set_xy(316, row_y); pdf.cell(25, 10, "9%", align="C")
-        pdf.set_xy(347, row_y); pdf.cell(55, 10, f"{c:,.2f}", align="R")
-        pdf.set_xy(410, row_y); pdf.cell(25, 10, "9%", align="C")
-        pdf.set_xy(441, row_y); pdf.cell(55, 10, f"{s:,.2f}", align="R")
-        pdf.set_xy(500, row_y); pdf.cell(60, 10, f"{c+s:,.2f}", align="R")
-        row_y += tax_row_h
+        pdf.set_xy(122, tax_y + 2); pdf.set_font("Helvetica", "B", 7); pdf.cell(100, 10, "HSN/SAC")
+        pdf.set_xy(261, tax_y + 2); pdf.multi_cell(55, 10, "Taxable\n  Value")
+        pdf.set_xy(342, tax_y + 2); pdf.cell(60, 10, "CGST")
+        pdf.set_xy(426, tax_y + 2); pdf.cell(70, 10, "SGST/UTGST")
+        pdf.set_xy(505, tax_y + 2); pdf.multi_cell(55, 10, "      Total\nTax Amount")
+        pdf.set_xy(318, tax_y + 14); pdf.set_font("Helvetica", "", 6); pdf.cell(25, 8, "Rate")
+        pdf.set_xy(362, tax_y + 14); pdf.cell(40, 8, "Amount")
+        pdf.set_xy(412, tax_y + 14); pdf.cell(25, 8, "Rate")
+        pdf.set_xy(454, tax_y + 14); pdf.cell(40, 8, "Amount")
 
-    # Tax totals row
-    tot_y = tax_y + tax_h - tax_total_row_h + 2
-    pdf.set_font("Helvetica", "B", 7)
-    pdf.set_xy(224, tot_y); pdf.cell(25, 10, "Total")
-    pdf.set_xy(252, tot_y); pdf.cell(55, 10, f"{grand_total_amt:,.2f}", align="R")
-    pdf.set_xy(347, tot_y); pdf.cell(55, 10, f"{cgst:,.2f}", align="R")
-    pdf.set_xy(441, tot_y); pdf.cell(55, 10, f"{sgst:,.2f}", align="R")
-    pdf.set_xy(500, tot_y); pdf.cell(60, 10, f"{sgst+cgst:,.2f}", align="R")
+        row_y = tax_y + tax_header_h + 1
+        pdf.set_font("Helvetica", "", 7)
+        for hsn, taxable in hsn_groups.items():
+            c = round(taxable * 0.09, 2); s = round(taxable * 0.09, 2)
+            pdf.set_xy(122, row_y); pdf.cell(128, 10, hsn)
+            pdf.set_xy(252, row_y); pdf.cell(55, 10, f"{taxable:,.2f}", align="R")
+            pdf.set_xy(316, row_y); pdf.cell(25, 10, "9%", align="C")
+            pdf.set_xy(347, row_y); pdf.cell(55, 10, f"{c:,.2f}", align="R")
+            pdf.set_xy(410, row_y); pdf.cell(25, 10, "9%", align="C")
+            pdf.set_xy(441, row_y); pdf.cell(55, 10, f"{s:,.2f}", align="R")
+            pdf.set_xy(500, row_y); pdf.cell(60, 10, f"{c+s:,.2f}", align="R")
+            row_y += tax_row_h
+
+        tot_y = tax_y + tax_h - tax_total_row_h + 2
+        pdf.set_font("Helvetica", "B", 7)
+        pdf.set_xy(224, tot_y); pdf.cell(25, 10, "Total")
+        taxable_total = sum(hsn_groups.values())
+        pdf.set_xy(252, tot_y); pdf.cell(55, 10, f"{taxable_total:,.2f}", align="R")
+        pdf.set_xy(347, tot_y); pdf.cell(55, 10, f"{cgst:,.2f}", align="R")
+        pdf.set_xy(441, tot_y); pdf.cell(55, 10, f"{sgst:,.2f}", align="R")
+        pdf.set_xy(500, tot_y); pdf.cell(60, 10, f"{sgst+cgst:,.2f}", align="R")
+
+        total_tax = sgst + cgst
+    else:
+        # IGST only
+        pdf.line(330, tax_y, 330, tax_y + tax_h)
+        pdf.line(395, tax_y, 395, tax_y + tax_h)
+        pdf.line(440, tax_y + 12, 440, tax_y + tax_h)
+        pdf.line(498, tax_y, 498, tax_y + tax_h)
+        pdf.line(395, tax_y + 12, 498, tax_y + 12)
+
+        pdf.set_xy(172, tax_y + 2); pdf.set_font("Helvetica", "B", 7); pdf.cell(100, 10, "HSN/SAC")
+        pdf.set_xy(351, tax_y + 2); pdf.multi_cell(55, 10, "Taxable\n  Value")
+        pdf.set_xy(435, tax_y + 2); pdf.cell(60, 10, "IGST")
+        pdf.set_xy(508, tax_y + 2); pdf.multi_cell(55, 10, "      Total\nTax Amount")
+        pdf.set_xy(409, tax_y + 14); pdf.set_font("Helvetica", "", 6); pdf.cell(25, 8, "Rate")
+        pdf.set_xy(458, tax_y + 14); pdf.cell(40, 8, "Amount")
+
+        row_y = tax_y + tax_header_h + 1
+        pdf.set_font("Helvetica", "", 7)
+        for hsn, taxable in hsn_groups.items():
+            ig = round(taxable * 0.18, 2)
+            pdf.set_xy(172, row_y); pdf.cell(128, 10, hsn)
+            pdf.set_xy(302, row_y); pdf.cell(90, 10, f"{taxable:,.2f}", align="R")
+            pdf.set_xy(415, row_y); pdf.cell(25, 10, "18%", align="C")
+            pdf.set_xy(405, row_y); pdf.cell(90, 10, f"{ig:,.2f}", align="R")
+            pdf.set_xy(500, row_y); pdf.cell(60, 10, f"{ig:,.2f}", align="R")
+            row_y += tax_row_h
+
+        tot_y = tax_y + tax_h - tax_total_row_h + 2
+        pdf.set_font("Helvetica", "B", 7)
+        pdf.set_xy(304, tot_y); pdf.cell(25, 10, "Total")
+        taxable_total = sum(hsn_groups.values())
+        pdf.set_xy(302, tot_y); pdf.cell(90, 10, f"{taxable_total:,.2f}", align="R")
+        pdf.set_xy(405, tot_y); pdf.cell(90, 10, f"{igst:,.2f}", align="R")
+        pdf.set_xy(500, tot_y); pdf.cell(60, 10, f"{igst:,.2f}", align="R")
+
+        total_tax = igst
 
     # Tax in words
     tiw_y = tax_y + tax_h + 3
     pdf.set_xy(30, tiw_y); pdf.set_font("Helvetica", "", 7); pdf.cell(80, 10, "Tax Amount (in words) :")
-    tax_paise = round((sgst + cgst - int(sgst + cgst)) * 100)
+    tax_paise = round((total_tax - int(total_tax)) * 100)
     pdf.set_xy(130, tiw_y); pdf.set_font("Helvetica", "B", 8)
-    pdf.cell(350, 10, f"Indian Rupees {_num_to_words(int(sgst+cgst))}" + (f" and {_num_to_words(tax_paise)} paise" if tax_paise else "") + " Only")
+    pdf.cell(350, 10, f"Indian Rupees {_num_to_words(int(total_tax))}" + (f" and {_num_to_words(tax_paise)} paise" if tax_paise else "") + " Only")
 
     # ── Footer — fix #6: OUTER BOX around declaration + bank details ──
     footer_y = tiw_y + 15
@@ -431,7 +560,7 @@ def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, r
     pdf.set_xy(250, footer_y + footer_h-14); pdf.set_font("Helvetica", "", 7)
     pdf.cell(250, 10, "This is a Computer Generated Invoice")
 
-
+#Only for testing Structure of PI
 @app.get("/test-invoice/{order_id}")
 def test_invoice(order_id: int):
     pdf = generate_invoice_pdf(order_id)

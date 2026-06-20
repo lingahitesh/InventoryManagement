@@ -224,14 +224,45 @@ def get_inventory_summary(sku_type=None, sku_subtype=None, sku_dim=None,
 def get_matching_skus(sku_type, sku_subtype, sku_dim):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT sku_id, sku_type, sku_subtype, sku_dim,
-               sku_quantity, sku_cost_price, sku_desc, sku_units,
-               tracking_id, entry_date
-        FROM inventory
-        WHERE sku_type=:1 AND sku_subtype=:2 AND sku_dim=:3 AND sku_quantity > 0
-        ORDER BY sku_id ASC
-    """, [sku_type, sku_subtype, sku_dim])
+
+    # For dimensionless products or exact match fallback
+    if sku_dim == '-' or not sku_dim:
+        cursor.execute("""
+            SELECT sku_id, sku_type, sku_subtype, sku_dim,
+                   sku_quantity, sku_cost_price, sku_desc, sku_units,
+                   tracking_id, entry_date
+            FROM inventory
+            WHERE sku_type=:1 AND sku_subtype=:2 AND sku_dim=:3 AND sku_units > 0
+            ORDER BY sku_id ASC
+        """, [sku_type, sku_subtype, sku_dim])
+    else:
+        # Extract leading numeric part for ±15 range match
+        import re
+        num_match = re.match(r'(\d+)', sku_dim)
+        if num_match:
+            dim_val = int(num_match.group(1))
+            dim_low = dim_val
+            dim_high = dim_val + 15
+            # Match where the leading number of sku_dim is within range
+            cursor.execute("""
+                SELECT sku_id, sku_type, sku_subtype, sku_dim,
+                       sku_quantity, sku_cost_price, sku_desc, sku_units,
+                       tracking_id, entry_date
+                FROM inventory
+                WHERE sku_type=:1 AND sku_subtype=:2 AND sku_units > 0
+                  AND TO_NUMBER(REGEXP_SUBSTR(sku_dim, '^\d+')) BETWEEN :3 AND :4
+                ORDER BY sku_id ASC
+            """, [sku_type, sku_subtype, dim_low, dim_high])
+        else:
+            cursor.execute("""
+                SELECT sku_id, sku_type, sku_subtype, sku_dim,
+                       sku_quantity, sku_cost_price, sku_desc, sku_units,
+                       tracking_id, entry_date
+                FROM inventory
+                WHERE sku_type=:1 AND sku_subtype=:2 AND sku_dim=:3 AND sku_units > 0
+                ORDER BY sku_id ASC
+            """, [sku_type, sku_subtype, sku_dim])
+
     rows = cursor.fetchall()
     cursor.close()
     conn.close()

@@ -51,7 +51,7 @@ function FilterBar({ onFilterChange, resetKey })
     );
 }
 
-function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onViewRecord })
+function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onViewRecord, refreshKey })
 {
     const inlineRef = useRef({ type: "", subtype: "", dim: "" });
     const [resetKey,        setResetKey]        = useState(0);
@@ -73,8 +73,10 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
     const [deleteConfirm, setDeleteConfirm] = useState(false);
     const [deleteError,   setDeleteError]   = useState("");
 
+    const initialLoadDone = useRef(false);
+
     // ── Fetch ─────────────────────────────────────────────────
-    const doFetch = useCallback(async (ft, fs, fd, tid, cpMin, cpMax, dFrom, dTo) =>
+    const doFetch = useCallback(async (ft, fs, fd, tid, cpMin, cpMax, dFrom, dTo, showLoader = false) =>
     {
         const filters = {
             sku_type:       ft    || undefined,
@@ -86,13 +88,15 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
             date_from:      dFrom || undefined,
             date_to:        dTo   || undefined
         };
-        setLoading(true); setError("");
+        if (!initialLoadDone.current || showLoader) setLoading(true);
+        setError("");
         try {
             const [summ, raw] = await Promise.all([
                 getInventorySummary(filters),
                 searchInventory(filters)
             ]);
-            setSummary(summ); setRecords(raw); setExpanded({});
+            setSummary(summ); setRecords(raw);
+            initialLoadDone.current = true;
         } catch (err) {
             setError(err.message || "Failed to fetch inventory");
         } finally {
@@ -101,6 +105,16 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
     }, []);
 
     useEffect(() => { doFetch("", "", "", "", "", "", "", ""); }, [doFetch]);
+
+    // Refresh when parent signals (e.g. after edit/add)
+    const prevRefreshKey = useRef(refreshKey);
+    useEffect(() => {
+        if (prevRefreshKey.current !== refreshKey) {
+            prevRefreshKey.current = refreshKey;
+            const { type, subtype, dim } = inlineRef.current;
+            doFetch(type, subtype, dim, advTrackingId, advCostPriceMin, advCostPriceMax, advDateFrom, advDateTo);
+        }
+    }, [refreshKey, doFetch, advTrackingId, advCostPriceMin, advCostPriceMax, advDateFrom, advDateTo]);
 
     const handleInlineChange = useCallback((t, s, d) =>
     {
@@ -112,7 +126,7 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
     const handleRefresh = useCallback(() =>
     {
         const { type, subtype, dim } = inlineRef.current;
-        doFetch(type, subtype, dim, advTrackingId, advCostPriceMin, advCostPriceMax, advDateFrom, advDateTo);
+        doFetch(type, subtype, dim, advTrackingId, advCostPriceMin, advCostPriceMax, advDateFrom, advDateTo, true);
     }, [doFetch, advTrackingId, advCostPriceMin, advCostPriceMax, advDateFrom, advDateTo]);
 
     const handleAdvSearch = () =>
@@ -126,8 +140,9 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
         inlineRef.current = { type: "", subtype: "", dim: "" };
         setAdvTrackingId(""); setAdvCostPriceMin(""); setAdvCostPriceMax("");
         setAdvDateFrom(""); setAdvDateTo(""); setAdvOpen(false);
+        setExpanded({});
         setResetKey(k => k + 1);
-        doFetch("", "", "", "", "", "", "", "");
+        doFetch("", "", "", "", "", "", "", "", true);
     };
 
     // ── Expand ───────────────────────────────────────────────
@@ -152,7 +167,9 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
         setDeleteConfirm(false); setDeleteTarget(null);
         try {
             await deleteInventoryItem(target.sku_id);
-            handleRefresh();
+            // Silent refresh (no loader, preserves scroll/expanded)
+            const { type, subtype, dim } = inlineRef.current;
+            doFetch(type, subtype, dim, advTrackingId, advCostPriceMin, advCostPriceMax, advDateFrom, advDateTo);
         } catch (err) {
             setDeleteError(err.message || "Failed to delete SKU");
         }
@@ -179,8 +196,8 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
             <div className="retrieval-header-row">
                 <h1>Inventory</h1>
                 <div className="retrieval-toolbar">
-                    <button className="rtb-btn" onClick={handleRefresh} disabled={loading}>↻</button>
-                    <button className="rtb-btn" onClick={handleClear}   disabled={loading}>✕ Clear</button>
+                    <button className="rtb-btn" onClick={() => { setExpanded({}); handleRefresh(); }} disabled={loading}>↻</button>
+                    <button className="rtb-btn" onClick={handleClear} disabled={loading}>✕ Clear</button>
                     <button className="rtb-btn rtb-adv" onClick={() => setAdvOpen(o => !o)}>
                         {advOpen ? "▲ Adv. Search" : "▼ Adv. Search"}
                     </button>
@@ -217,7 +234,7 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                 </div>
             )}
 
-            <div className="retrieval-records-panel">
+            <div className="retrieval-table-wrapper">
                 {/* Filter bar — always rendered, never unmounts */}
                 <div className="retrieval-filter-bar-wrap">
                     <table className="retrieval-table retrieval-filter-table">
