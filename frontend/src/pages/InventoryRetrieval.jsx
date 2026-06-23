@@ -204,8 +204,8 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                 </div>
             </div>
 
-            {deleteError && <div className="retrieval-error">{deleteError}</div>}
-            {error       && <div className="retrieval-error">{error}</div>}
+            {deleteError && <div className="api-error">{deleteError}</div>}
+            {error       && <div className="api-error">{error}</div>}
 
             {advOpen && (
                 <div className="retrieval-adv-panel">

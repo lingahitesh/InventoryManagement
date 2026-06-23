@@ -10,6 +10,7 @@ import PlaceOrder   from "./pages/PlaceOrder";
 import CustomerList from "./pages/CustomerList";
 import OrderList    from "./pages/OrderList";
 import Dispatch     from "./pages/Dispatch";
+import Payment      from "./pages/Payment";
 import ModalOverlay from "./components/ModalOverlay";
 import { getInventory } from "./api";
 
@@ -121,6 +122,7 @@ function App()
         { id: "customer",   title: "Customer List" },
         { id: "orderlist",  title: "Order List" },
         { id: "dispatch",   title: "Dispatch" },
+        { id: "payment",    title: "Payment" },
     ];
 
     return (
@@ -231,6 +233,11 @@ function App()
                 {/* ── Dispatch ── */}
                 <div style={{ display: activeTab === "dispatch" ? "block" : "none" }}>
                     <Dispatch onDispatchSuccess={() => setOrderRefreshKey(k => k + 1)} />
+                </div>
+
+                {/* ── Payment ── */}
+                <div style={{ display: activeTab === "payment" ? "block" : "none" }}>
+                    <Payment />
                 </div>
 
             </div>

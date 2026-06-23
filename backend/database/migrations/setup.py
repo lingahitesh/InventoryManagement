@@ -14,7 +14,7 @@ def init_setup():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        sql_file = os.path.join(os.path.dirname(__file__), "000_tester_CUSTOMERS.sql")
+        sql_file = os.path.join(os.path.dirname(__file__), "")
         with open(sql_file, "r", encoding="utf-8") as f:
             sql = f.read()
         # Remove comment lines

@@ -1,5 +1,5 @@
 .order-list-container {
-    padding: 10px;
+    padding: 10px 10px;
     position: relative;
 }
 
@@ -99,11 +99,13 @@
 .ol-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 12px;
     background: white;
     border-radius: 10px;
     overflow: hidden;
 }
+
+/* Remove fixed column widths — let content flow */
 
 .ol-table th {
     background: #1a1a2e;
@@ -199,7 +201,7 @@
 .ol-items-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .ol-items-table th {
@@ -337,4 +339,152 @@
 .ol-status--completed {
     background: #d4edda;
     color: #155724;
+}
+
+
+/* ── Order summary (delivery charge + GST) ── */
+.ol-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #f8f9ff;
+}
+
+.ol-summary-table td { padding: 6px 14px; }
+
+.ol-summary-label {
+    text-align: right;
+    color: #555;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.ol-summary-val {
+    font-weight: 600;
+    min-width: 100px;
+}
+
+.ol-summary-total {
+    border-top: 2px solid #1a1a2e;
+    background: #eef0ff;
+}
+
+.ol-summary-total td {
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+
+/* ── Sales / Purchase sub-tabs ── */
+.ol-subtab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #1a1a2e;
+    margin-bottom: 0;
+}
+
+.ol-subtab-btn {
+    padding: 9px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    background: #f5f5f5;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    border-radius: 6px 6px 0 0;
+    margin-right: 4px;
+    border: 2px solid transparent;
+    border-bottom: none;
+}
+
+.ol-subtab-btn:hover:not(.active) {
+    background: #e8e8f0;
+    color: #1a1a2e;
+}
+
+.ol-subtab-btn.active {
+    background: #1a1a2e;
+    color: white;
+    border-color: #1a1a2e;
+}
+
+
+/* ── Ready for dispatch ── */
+.ol-row-ready { background: #e8f5e9 !important; }
+.ol-row-ready:hover { background: #c8e6c9 !important; }
+
+.ol-item-ready { background: #f1f8e9 !important; }
+.ol-item-ready:hover { background: #dcedc8 !important; }
+
+
+/* ── Ready button (text style) ── */
+.ol-ready-btn {
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 4px;
+    border: 1.5px solid #c62828;
+    background: #ffebee;
+    color: #c62828;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    margin-right: 4px;
+}
+
+.ol-ready-btn:hover { background: #ffcdd2; }
+
+.ol-ready-btn.ready {
+    border-color: #2e7d32;
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.ol-ready-btn.ready:hover { background: #c8e6c9; }
+
+
+/* ── Items sub-table column sizing ── */
+.ol-items-table th:nth-child(1), .ol-items-table td:nth-child(1) { width: 6%; }  /* SKU ID */
+.ol-items-table th:nth-child(2), .ol-items-table td:nth-child(2) { width: 8%; }  /* Type */
+.ol-items-table th:nth-child(3), .ol-items-table td:nth-child(3) { width: 20%; } /* Sub Type */
+.ol-items-table th:nth-child(4), .ol-items-table td:nth-child(4) { width: 8%; }  /* Dim */
+.ol-items-table th:nth-child(5), .ol-items-table td:nth-child(5) { width: 7%; }  /* Units */
+.ol-items-table th:nth-child(6), .ol-items-table td:nth-child(6) { width: 9%; }  /* Dispatched */
+.ol-items-table th:nth-child(7), .ol-items-table td:nth-child(7) { width: 11%; } /* Batch Qty */
+.ol-items-table th:nth-child(8), .ol-items-table td:nth-child(8) { width: 10%; } /* Selling Price */
+.ol-items-table th:nth-child(9), .ol-items-table td:nth-child(9) { width: 11%; } /* Subtotal */
+.ol-items-table th:nth-child(10), .ol-items-table td:nth-child(10) { width: 10%; } /* Ready */
+
+.ol-items-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+/* ── PI Dialog ── */
+.pi-dialog { min-width: 700px; }
+
+.pi-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pi-items-section h4 { margin: 0 0 8px; font-size: 14px; color: #1a1a2e; }
+
+.pi-select-all {
+    margin-bottom: 8px; font-size: 13px; font-weight: 600;
+}
+.pi-select-all input { margin-right: 6px; width: 15px; height: 15px; cursor: pointer; }
+
+.pi-items-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+.pi-items-table th { background: #f0f0f5; padding: 6px 10px; text-align: left; font-weight: 600; }
+.pi-items-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
+.pi-items-table input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+
+.pi-preview { border-top: 1px solid #eee; padding-top: 12px; }
+
+.pi-dialog-actions {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding-top: 12px; border-top: 1px solid #eee; margin-top: 12px;
 }

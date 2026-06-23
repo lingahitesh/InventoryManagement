@@ -37,10 +37,25 @@ function CustomerList({ goBack, customers, setCustomers })
     useEffect(() => {
         setLoading(true);
         getCustomers()
-            .then(data => setCustomers(data))
+            .then(data => { setCustomers(data); setApiError(""); })
             .catch(err => setApiError(err.message || "Failed to load customers"))
             .finally(() => setLoading(false));
     }, []);
+
+    // Auto-retry when window regains focus if there was an error
+    useEffect(() => {
+        const retry = () => {
+            if (apiError) {
+                setLoading(true);
+                getCustomers()
+                    .then(data => { setCustomers(data); setApiError(""); })
+                    .catch(() => {})
+                    .finally(() => setLoading(false));
+            }
+        };
+        window.addEventListener("focus", retry);
+        return () => window.removeEventListener("focus", retry);
+    }, [apiError]);
 
     const handleChange = (e) =>
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -199,7 +214,8 @@ function CustomerList({ goBack, customers, setCustomers })
                 <div className="customer-toolbar">
                     <button className="cust-refresh-btn" disabled={loading} onClick={() => {
                         setLoading(true);
-                        getCustomers().then(d => setCustomers(d)).catch(() => {}).finally(() => setLoading(false));
+                        setApiError("");
+                        getCustomers().then(d => setCustomers(d)).catch(err => setApiError(err.message || "Failed")).finally(() => setLoading(false));
                     }}>↻</button>
                     <button className="cust-clear-btn" onClick={() => {
                         setSrchName(""); setSrchEmail(""); setSrchPhone(""); setSrchCity(""); setSrchGst("");

@@ -117,7 +117,27 @@ def get_orders():
                NVL((SELECT SUM(di.units_dispatched)
                     FROM dispatch_items di
                     JOIN order_items oi ON oi.item_id = di.order_item_id
-                    WHERE oi.order_id = o.order_id), 0) AS dispatched_units
+                    WHERE oi.order_id = o.order_id), 0) AS dispatched_units_count,
+               CASE WHEN (SELECT COUNT(*) FROM order_items oi2 WHERE oi2.order_id = o.order_id AND NVL(oi2.is_ready,0) = 0) = 0
+                    THEN 1 ELSE 0 END AS is_all_ready,
+               NVL((SELECT SUM(oi3.units * oi3.sku_quantity * oi3.selling_price)
+                    FROM order_items oi3 WHERE oi3.order_id = o.order_id), 0) AS items_total,
+               NVL((SELECT SUM(
+                    (oi4.units - NVL((SELECT SUM(di2.units_dispatched) FROM dispatch_items di2 WHERE di2.order_item_id = oi4.item_id), 0))
+                    * oi4.sku_quantity * oi4.selling_price)
+                    FROM order_items oi4 WHERE oi4.order_id = o.order_id
+                    AND oi4.units > NVL((SELECT SUM(di3.units_dispatched) FROM dispatch_items di3 WHERE di3.order_item_id = oi4.item_id), 0)
+               ), 0) AS pending_amount,
+               NVL((SELECT SUM(oi5.units - NVL((SELECT SUM(di4.units_dispatched) FROM dispatch_items di4 WHERE di4.order_item_id = oi5.item_id), 0))
+                    FROM order_items oi5 WHERE oi5.order_id = o.order_id
+                    AND oi5.units > NVL((SELECT SUM(di5.units_dispatched) FROM dispatch_items di5 WHERE di5.order_item_id = oi5.item_id), 0)
+               ), 0) AS pending_units,
+               NVL((SELECT SUM(
+                    (oi6.units - NVL((SELECT SUM(di6.units_dispatched) FROM dispatch_items di6 WHERE di6.order_item_id = oi6.item_id), 0))
+                    * oi6.sku_quantity)
+                    FROM order_items oi6 WHERE oi6.order_id = o.order_id
+                    AND oi6.units > NVL((SELECT SUM(di7.units_dispatched) FROM dispatch_items di7 WHERE di7.order_item_id = oi6.item_id), 0)
+               ), 0) AS pending_qty
         FROM   orders o
         JOIN   customers c ON c.customer_id = o.customer_id
         ORDER  BY o.order_id DESC
@@ -127,7 +147,8 @@ def get_orders():
     conn.close()
     keys = ["order_id", "customer_id", "customer_name", "shipping_address",
             "order_date", "total_units", "total_qty", "total_amount",
-            "delivery_charge", "dispatched_units"]
+            "delivery_charge", "dispatched_units", "is_all_ready",
+            "items_total", "pending_amount", "pending_units", "pending_qty"]
     result = []
     for row in rows:
         d = dict(zip(keys, row))
@@ -137,6 +158,11 @@ def get_orders():
             if d[k] is not None:
                 d[k] = float(d[k]) if k != "total_units" else int(d[k])
         dispatched = int(d.pop("dispatched_units") or 0)
+        is_all_ready = bool(d.pop("is_all_ready") or 0)
+        items_total = float(d.pop("items_total") or 0)
+        pending_amount = float(d.pop("pending_amount") or 0)
+        pending_units = int(d.pop("pending_units") or 0)
+        pending_qty = float(d.pop("pending_qty") or 0)
         total = int(d.get("total_units") or 0)
         if dispatched == 0:
             d["dispatch_status"] = "pending"
@@ -144,6 +170,18 @@ def get_orders():
             d["dispatch_status"] = "completed"
         else:
             d["dispatch_status"] = "partial"
+        # Compute total with GST (18% on subtotal + delivery)
+        taxable = (d.get("total_amount") or 0) + (d.get("delivery_charge") or 0)
+        d["total_with_gst"] = round(taxable * 1.18, 2)
+        d["is_all_ready"] = is_all_ready
+        # Pending/completed specific totals
+        d["pending_units"] = pending_units
+        d["pending_qty"] = round(pending_qty, 3)
+        d["pending_amount"] = round(pending_amount, 2)
+        dispatched_amount = items_total - pending_amount
+        d["dispatched_units"] = dispatched
+        d["dispatched_qty"] = round((d.get("total_qty") or 0) - pending_qty, 3)
+        d["dispatched_amount"] = round(dispatched_amount, 2)
         result.append(d)
     return result
 
@@ -167,7 +205,8 @@ def get_order_items(order_id):
                oi.sku_quantity   AS batch_qty_kg,
                oi.selling_price,
                oi.units * oi.sku_quantity * oi.selling_price AS subtotal,
-               NVL((SELECT SUM(di.units_dispatched) FROM dispatch_items di WHERE di.order_item_id = oi.item_id), 0) AS units_dispatched
+               NVL((SELECT SUM(di.units_dispatched) FROM dispatch_items di WHERE di.order_item_id = oi.item_id), 0) AS units_dispatched,
+               NVL(oi.is_ready, 0) AS is_ready
         FROM   order_items oi
         JOIN   inventory i ON i.sku_id = oi.sku_id
         WHERE  oi.order_id = :1
@@ -177,7 +216,7 @@ def get_order_items(order_id):
     cursor.close()
     conn.close()
     keys = ["item_id", "sku_id", "sku_type", "sku_subtype", "sku_dim",
-            "units_ordered", "batch_qty_kg", "selling_price", "subtotal", "units_dispatched"]
+            "units_ordered", "batch_qty_kg", "selling_price", "subtotal", "units_dispatched", "is_ready"]
     result = []
     for row in rows:
         d = dict(zip(keys, row))
@@ -188,6 +227,7 @@ def get_order_items(order_id):
             d["units_ordered"] = int(d["units_ordered"])
         d["units_dispatched"] = int(d["units_dispatched"] or 0)
         d["units_remaining"] = d["units_ordered"] - d["units_dispatched"]
+        d["is_ready"] = bool(d["is_ready"])
         result.append(d)
     return result
 
@@ -214,6 +254,8 @@ def get_order_full(order_id):
     for k in ("total_qty", "total_amount", "delivery_charge"):
         if order[k] is not None:
             order[k] = float(order[k])
+    taxable = (order.get("total_amount") or 0) + (order.get("delivery_charge") or 0)
+    order["total_with_gst"] = round(taxable * 1.18, 2)
     # Get items
     cursor.execute("""
         SELECT oi.sku_id, i.sku_type, i.sku_subtype, i.sku_dim,
@@ -274,3 +316,12 @@ def delete_order(order_id):
     finally:
         cursor.close()
         conn.close()
+
+
+def toggle_order_item_ready(item_id, is_ready):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE order_items SET is_ready = :1 WHERE item_id = :2", [1 if is_ready else 0, item_id])
+    conn.commit()
+    cursor.close()
+    conn.close()

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from backend.services.order_service import (
     allocate_and_place_order, get_orders, get_order_items,
-    get_order_full, delete_order,
+    get_order_full, delete_order, toggle_order_item_ready,
 )
 from backend.schemas.order_schema import OrderCreate
 
@@ -29,11 +29,12 @@ def fetch_order_items(order_id: int):
 
 
 @router.get("/{order_id}/invoice")
-def download_invoice(order_id: int):
+def download_invoice(order_id: int, item_ids: str = None):
     from fastapi.responses import Response
     from backend.services.invoice_service import generate_invoice_pdf
     try:
-        pdf_bytes = generate_invoice_pdf(order_id)
+        ids_list = [int(x) for x in item_ids.split(",") if x.strip()] if item_ids else None
+        pdf_bytes = generate_invoice_pdf(order_id, item_ids=ids_list)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
     if not pdf_bytes:
@@ -41,7 +42,7 @@ def download_invoice(order_id: int):
     return Response(
         content=bytes(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=PI_{order_id}.pdf"}
+        headers={"Content-Disposition": f"inline; filename=PI_{order_id}.pdf"}
     )
 
 
@@ -59,3 +60,9 @@ def remove_order(order_id: int):
     if rows == 0:
         raise HTTPException(status_code=404, detail="Order not found")
     return {"message": "Order deleted and inventory restored"}
+
+
+@router.post("/{order_id}/items/{item_id}/ready")
+def set_item_ready(order_id: int, item_id: int, body: dict):
+    toggle_order_item_ready(item_id, body.get("is_ready", True))
+    return {"message": "Updated"}

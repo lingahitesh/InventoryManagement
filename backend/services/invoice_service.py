@@ -155,10 +155,13 @@ def _draw_table_header(pdf, y_start):
     pdf.set_xy(503, y_start + 4); pdf.cell(95, 18, "Amount")
 
 
-def generate_invoice_pdf(order_id) -> bytes:
+def generate_invoice_pdf(order_id, item_ids=None) -> bytes:
     order = get_order_full(order_id)
     if not order: return None
     items = get_order_items(order_id)
+    # Filter items if specific IDs requested
+    if item_ids:
+        items = [i for i in items if i["item_id"] in item_ids]
     customer = get_customer_details(order["customer_id"])
     if not customer: return None
 

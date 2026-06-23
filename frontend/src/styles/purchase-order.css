@@ -1,0 +1,132 @@
+.po-container { padding: 10px; }
+
+.po-header-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; flex-wrap: wrap; gap: 8px;
+}
+.po-header-row h1 { margin: 0; font-size: 26px; color: #1a1a2e; }
+
+/* ── Form ── */
+.po-form { padding: 4px; min-width: 560px; }
+
+.po-section {
+    border: 1px solid #e0e0e0; border-radius: 10px;
+    padding: 16px; margin-bottom: 16px; background: #fafbff;
+}
+
+.po-section-title {
+    font-size: 14px; font-weight: 700; color: #1a1a2e;
+    margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.4px;
+    padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;
+}
+
+.po-fields-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+
+.po-field { display: flex; flex-direction: column; gap: 4px; }
+.po-field label { font-size: 12px; font-weight: 600; color: #555; }
+.po-field input, .po-field select {
+    padding: 9px 12px; border: 2px solid #e0e0e0; border-radius: 6px;
+    font-size: 13px; color: #1a1a2e; background: white; transition: border-color 0.2s;
+}
+.po-field input:focus, .po-field select:focus { outline: none; border-color: #4fc3f7; }
+.po-field input:disabled { background: #f5f5f5; color: #999; }
+.po-span2 { grid-column: span 2; }
+
+/* ── Cart items ── */
+.po-cart-item {
+    border: 1px solid #e0e0e0; border-radius: 8px;
+    padding: 12px; margin-bottom: 10px; background: white;
+}
+
+.po-cart-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
+.po-cart-row:last-child { margin-bottom: 0; }
+
+.po-cart-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; }
+.po-cart-field label { font-size: 11px; font-weight: 600; color: #666; }
+.po-cart-field input, .po-cart-field select {
+    padding: 7px 10px; border: 1.5px solid #d0d0d0; border-radius: 5px;
+    font-size: 13px; color: #1a1a2e; background: white; transition: border-color 0.2s;
+}
+.po-cart-field input:focus, .po-cart-field select:focus { outline: none; border-color: #4fc3f7; }
+.po-cart-field input:disabled { background: #f5f5f5; color: #999; }
+.po-cart-field-wide { flex: 2; }
+
+.po-qty-row { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; }
+.po-qty-row input { flex: 1; }
+
+.po-cart-remove-wrap { flex: 0 0 auto; align-self: flex-end; }
+
+.po-add-item-btn { margin-top: 4px; }
+
+.po-form-actions {
+    display: flex; justify-content: flex-end; gap: 12px;
+    padding-top: 12px; border-top: 1px solid #eee;
+}
+
+/* ── Arrive buttons ── */
+.po-arrive-btn {
+    padding: 3px 10px; border-radius: 5px; border: 1.5px solid #c62828;
+    background: #ffebee; color: #c62828; font-weight: 700; font-size: 11px;
+    cursor: pointer; margin-right: 4px; transition: all 0.2s;
+}
+.po-arrive-btn:hover { background: #ffcdd2; }
+.po-arrive-btn.arrived {
+    border-color: #2e7d32; background: #e8f5e9; color: #2e7d32;
+}
+.po-arrive-btn.arrived:hover { background: #c8e6c9; }
+
+.po-arrive-all-btn {
+    padding: 4px 10px; border-radius: 5px; border: 1.5px solid #c62828;
+    background: #ffebee; color: #c62828; font-weight: 700; font-size: 12px;
+    cursor: pointer; margin-right: 4px; transition: all 0.2s;
+}
+.po-arrive-all-btn:hover { background: #ffcdd2; }
+.po-arrive-all-btn.arrived {
+    border-color: #2e7d32; background: #e8f5e9; color: #2e7d32;
+}
+.po-arrive-all-btn.arrived:hover { background: #c8e6c9; }
+
+
+/* ── Qty table inside cart item ── */
+.po-qty-table {
+    margin-top: 10px;
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.po-qty-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 2fr 36px;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f0f0f5;
+    font-size: 11px;
+    font-weight: 700;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.po-qty-data-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 2fr 36px;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid #eee;
+    align-items: center;
+}
+
+.po-qty-data-row input {
+    padding: 7px 10px;
+    border: 1.5px solid #d0d0d0;
+    border-radius: 5px;
+    font-size: 13px;
+    color: #1a1a2e;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.po-qty-data-row input:focus { outline: none; border-color: #4fc3f7; }

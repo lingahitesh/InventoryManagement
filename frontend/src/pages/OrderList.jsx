@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import "../styles/order-list.css";
-import { getOrders, getOrderItems, getOrderFull, deleteOrder, getCustomers } from "../api";
+import { getOrders, getOrderItems, getOrderFull, deleteOrder, getCustomers, toggleOrderItemReady } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
+import ModalOverlay from "../components/ModalOverlay";
 import ComboInput from "../components/ComboInput";
+import PurchaseOrder from "./PurchaseOrder";
 
-function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
+function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
 {
     const [orders,   setOrders]   = useState([]);
     const [loading,  setLoading]  = useState(true);
@@ -18,6 +20,10 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
     const [searchContact,  setSearchContact]  = useState("");
     const [customersList,  setCustomersList]  = useState([]);
     const [deleteTarget,   setDeleteTarget]   = useState(null);
+    const [showPiDialog,   setShowPiDialog]   = useState(false);
+    const [piOrder,        setPiOrder]        = useState(null);
+    const [piItems,        setPiItems]        = useState([]);
+    const [piSelected,     setPiSelected]     = useState([]);
 
     const initialLoadDone = useRef(false);
 
@@ -29,6 +35,7 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
             const [ordersData, custsData] = await Promise.all([getOrders(), getCustomers()]);
             setOrders(ordersData);
             setCustomersList(custsData);
+            setError("");
             initialLoadDone.current = true;
         }
         catch (err) { setError(err.message || "Failed to load orders"); }
@@ -36,6 +43,13 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
     }, []);
 
     useEffect(() => { fetchOrders(); }, [fetchOrders, refreshKey]);
+
+    // Auto-retry on focus if errored
+    useEffect(() => {
+        const retry = () => { if (error) fetchOrders(); };
+        window.addEventListener("focus", retry);
+        return () => window.removeEventListener("focus", retry);
+    }, [error, fetchOrders]);
 
     const toggleExpand = async (orderId) =>
     {
@@ -75,6 +89,15 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
         }
     };
 
+    const handleToggleReady = async (orderId, itemId, isReady) => {
+        try {
+            await toggleOrderItemReady(orderId, itemId, isReady);
+            const items = await getOrderItems(orderId);
+            setExpanded(prev => ({ ...prev, [orderId]: { ...prev[orderId], items, loading: false } }));
+            fetchOrders(); // refresh is_all_ready in main row
+        } catch (err) { setError(err.message || "Failed to toggle ready"); }
+    };
+
     const filtered = orders.filter(o =>
     {
         // Status filter: all shows everything, pending shows pending+partial, completed shows completed+partial
@@ -111,6 +134,74 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteTarget(null)}
             />
+
+            {/* ── PI Dialog ── */}
+            {showPiDialog && piOrder && (
+                <ModalOverlay open={true} title={`Proforma Invoice — Order #${piOrder.order_id}`}
+                    onClose={() => setShowPiDialog(false)}>
+                    <div className="pi-dialog">
+                        <div className="pi-dialog-body">
+                            {/* Item selection */}
+                            <div className="pi-items-section">
+                                <h4>Select Items for Invoice</h4>
+                                <div className="pi-select-all">
+                                    <label>
+                                        <input type="checkbox"
+                                            checked={piSelected.length === piItems.length}
+                                            onChange={e => setPiSelected(e.target.checked ? piItems.map(i => i.item_id) : [])} />
+                                        Select All
+                                    </label>
+                                </div>
+                                <table className="pi-items-table">
+                                    <thead>
+                                        <tr><th></th><th>Type</th><th>Sub Type</th><th>Dim</th><th>Units</th><th>Qty</th><th>Price</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {piItems.map(item => (
+                                            <tr key={item.item_id}>
+                                                <td><input type="checkbox" checked={piSelected.includes(item.item_id)}
+                                                    onChange={e => {
+                                                        if (e.target.checked) setPiSelected(p => [...p, item.item_id]);
+                                                        else setPiSelected(p => p.filter(id => id !== item.item_id));
+                                                    }} /></td>
+                                                <td>{item.sku_type}</td>
+                                                <td>{item.sku_subtype}</td>
+                                                <td>{item.sku_dim}</td>
+                                                <td>{item.units_ordered}</td>
+                                                <td>{fmt(item.batch_qty_kg, 3)}</td>
+                                                <td>{fmt(item.selling_price)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Preview iframe */}
+                            <div className="pi-preview">
+                                <iframe
+                                    title="PI Preview"
+                                    src={`/api/orders/${piOrder.order_id}/invoice${piSelected.length < piItems.length ? `?item_ids=${piSelected.join(",")}` : ""}`}
+                                    style={{ width: "100%", height: "500px", border: "1px solid #ddd", borderRadius: 8 }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="pi-dialog-actions">
+                            <button className="cancel-btn" onClick={() => setShowPiDialog(false)}>Close</button>
+                            <button className="submit-btn" onClick={() => {
+                                const url = `/api/orders/${piOrder.order_id}/invoice${piSelected.length < piItems.length ? `?item_ids=${piSelected.join(",")}` : ""}`;
+                                window.open(url, "_blank");
+                            }}>📥 Download</button>
+                            <button className="submit-btn" style={{ background: "#2e7d32" }} onClick={() => {
+                                const url = `/api/orders/${piOrder.order_id}/invoice${piSelected.length < piItems.length ? `?item_ids=${piSelected.join(",")}` : ""}`;
+                                const w = window.open(url, "_blank");
+                                setTimeout(() => { if (w) w.print(); }, 1000);
+                            }}>🖨 Print</button>
+                        </div>
+                    </div>
+                </ModalOverlay>
+            )}
+
             <div className="order-list-header">
                 <h1>Order List</h1>
                 <div className="ol-toggle">
@@ -156,10 +247,11 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                     <table className="ol-table">
                         <thead>
                             <tr>
-                                <th>Order ID</th><th>Customer</th><th>Shipping Address</th><th>Order Date</th>
-                                <th className="th-qty">Total Units</th>
+                                <th>ID</th><th>Customer</th><th>Shipping Address</th><th>Order Date</th>
+                                <th className="th-qty">Units</th>
                                 <th className="th-qty">Total Qty (kgs)</th>
-                                <th className="th-price">Total Amount (Rs.)</th>
+                                <th className="th-price">Subtotal (₹)</th>
+                                <th className="th-price">Total w/ GST (₹)</th>
                                 <th>Status</th>
                                 <th className="col-actions"></th>
                             </tr>
@@ -171,17 +263,56 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                 const isOpen = exp?.open ?? false;
                                 return (
                                     <Fragment key={o.order_id}>
-                                        <tr>
+                                        <tr className={o.is_all_ready ? "ol-row-ready" : ""}>
                                             <td>{o.order_id}</td>
                                             <td>{o.customer_name}</td>
                                             <td>{o.shipping_address || "—"}</td>
                                             <td>{o.order_date ? o.order_date.slice(0, 10) : "—"}</td>
-                                            <td className="td-qty">{fmtInt(o.total_units)}</td>
-                                            <td className="td-qty">{fmt(o.total_qty, 3)}</td>
-                                            <td className="td-price">{fmt(o.total_amount)}</td>
+                                            <td className="td-qty">{fmtInt(viewMode === "pending" ? o.pending_units : viewMode === "completed" ? o.dispatched_units : o.total_units)}</td>
+                                            <td className="td-qty">{fmt(viewMode === "pending" ? o.pending_qty : viewMode === "completed" ? o.dispatched_qty : o.total_qty, 3)}</td>
+                                            <td className="td-price">{fmt(viewMode === "pending" ? o.pending_amount : viewMode === "completed" ? o.dispatched_amount : o.total_amount)}</td>
+                                            <td className="td-price" style={{ fontWeight: 700 }}>{fmt(
+                                                viewMode === "pending" ? (o.pending_amount + (o.delivery_charge || 0)) * 1.18 :
+                                                viewMode === "completed" ? (o.dispatched_amount + (o.delivery_charge || 0)) * 1.18 :
+                                                o.total_with_gst
+                                            )}</td>
                                             <td><span className={`ol-status ol-status--${o.dispatch_status || "pending"}`}>{o.dispatch_status || "pending"}</span></td>
                                             <td className="col-actions">
-                                                <button className="ol-pi-btn" onClick={() => window.open(`/api/orders/${o.order_id}/invoice`, "_blank")} title="Download PI">📄</button>
+                                                <button className={`ol-ready-btn${o.is_all_ready ? " ready" : ""}`}
+                                                    onClick={async () => {
+                                                        let items = expanded[o.order_id]?.items;
+                                                        if (!items || items.length === 0) {
+                                                            items = await getOrderItems(o.order_id);
+                                                            setExpanded(prev=>({...prev,[o.order_id]:{open: prev[o.order_id]?.open ?? false, items, loading:false}}));
+                                                        }
+                                                        for (const item of items) {
+                                                            if (item.is_ready === o.is_all_ready) await toggleOrderItemReady(o.order_id, item.item_id, !o.is_all_ready);
+                                                        }
+                                                        await fetchOrders();
+                                                        if (expanded[o.order_id]?.open) {
+                                                            const fresh = await getOrderItems(o.order_id);
+                                                            setExpanded(prev=>({...prev,[o.order_id]:{...prev[o.order_id],items:fresh}}));
+                                                        }
+                                                    }}>
+                                                    {o.is_all_ready ? "✓" : "✕"}
+                                                </button>
+                                                <button className="ol-pi-btn" onClick={async () => {
+                                                    // Load items for PI dialog
+                                                    let items = expanded[o.order_id]?.items;
+                                                    if (!items || items.length === 0) {
+                                                        items = await getOrderItems(o.order_id);
+                                                    }
+                                                    // Pre-select based on viewMode
+                                                    const preSelected = viewMode === "completed"
+                                                        ? items.filter(i => i.units_dispatched > 0).map(i => i.item_id)
+                                                        : viewMode === "pending"
+                                                            ? items.filter(i => i.units_remaining > 0).map(i => i.item_id)
+                                                            : items.map(i => i.item_id);
+                                                    setPiOrder(o);
+                                                    setPiItems(items);
+                                                    setPiSelected(preSelected);
+                                                    setShowPiDialog(true);
+                                                }} title="Proforma Invoice">📄</button>
                                                 <button className="ol-edit-btn" onClick={() => handleEdit(o)}>✎</button>
                                                 <button className="ol-delete-btn" onClick={() => handleDelete(o)}>🗑</button>
                                                 <button className="ol-details-btn" onClick={() => toggleExpand(o.order_id)}>
@@ -192,49 +323,83 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
 
                                         {isOpen && (
                                             <tr className="ol-items-row">
-                                                <td colSpan={9} style={{ padding: 0 }}>
+                                                <td colSpan={10} style={{ padding: 0 }}>
                                                     {exp.loading && <div className="ol-items-loading">Loading items…</div>}
                                                     {exp.error && <div className="ol-items-error">{exp.error}</div>}
                                                     {!exp.loading && exp.items.length === 0 && <div className="ol-items-loading">No items.</div>}
                                                     {!exp.loading && exp.items.length > 0 && (() => {
-                                                        // Filter items based on view mode
                                                         const viewItems = viewMode === "completed"
                                                             ? exp.items.filter(i => i.units_dispatched > 0)
                                                             : viewMode === "pending"
                                                                 ? exp.items.filter(i => i.units_remaining > 0)
                                                                 : exp.items;
                                                         if (viewItems.length === 0) return <div className="ol-items-loading">No items for this view.</div>;
+                                                        const subtotal = parseFloat(o.total_amount) || 0;
+                                                        const dc = parseFloat(o.delivery_charge) || 0;
+                                                        const taxable = subtotal + dc;
+                                                        const gst = taxable * 0.18;
+                                                        const totalWithGst = taxable + gst;
                                                         return (
-                                                        <table className="ol-items-table">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>SKU ID</th><th>Type</th><th>Sub Type</th><th>Dimensions</th>
-                                                                    <th className="th-qty">Units</th>
-                                                                    <th className="th-qty">Dispatched</th>
-                                                                    <th className="th-qty">Batch Qty (kgs)</th>
-                                                                    <th className="th-price">Selling Price</th>
-                                                                    <th className="th-price">Subtotal</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {viewItems.map(item => {
-                                                                    const displayUnits = viewMode === "completed" ? item.units_dispatched
-                                                                        : viewMode === "pending" ? item.units_remaining
-                                                                        : item.units_ordered;
-                                                                    return (
-                                                                    <tr key={item.item_id}>
-                                                                        <td>{item.sku_id}</td><td>{item.sku_type}</td>
-                                                                        <td>{item.sku_subtype}</td><td>{item.sku_dim}</td>
-                                                                        <td className="td-qty">{displayUnits}</td>
-                                                                        <td className="td-qty">{item.units_dispatched}/{item.units_ordered}</td>
-                                                                        <td className="td-qty">{fmt(item.batch_qty_kg, 3)}</td>
-                                                                        <td className="td-price">{fmt(item.selling_price)}</td>
-                                                                        <td className="td-price">{(displayUnits*(item.batch_qty_kg||0)*(item.selling_price||0)).toFixed(2)}</td>
+                                                            <>
+                                                            <table className="ol-items-table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>SKU ID</th><th>Type</th><th>Sub Type</th><th>Dim</th>
+                                                                        <th className="th-qty">Units</th>
+                                                                        <th className="th-qty">Disp.</th>
+                                                                        <th className="th-qty">Qty (kgs)</th>
+                                                                        <th className="th-price">Price</th>
+                                                                        <th className="th-price">Subtotal</th>
+                                                                        <th></th>
                                                                     </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {viewItems.map(item => {
+                                                                        const displayUnits = viewMode === "completed" ? item.units_dispatched
+                                                                            : viewMode === "pending" ? item.units_remaining
+                                                                            : item.units_ordered;
+                                                                        return (
+                                                                        <tr key={item.item_id} className={item.is_ready ? "ol-item-ready" : ""}>
+                                                                            <td>{item.sku_id}</td><td>{item.sku_type}</td>
+                                                                            <td>{item.sku_subtype}</td><td>{item.sku_dim}</td>
+                                                                            <td className="td-qty">{displayUnits}</td>
+                                                                            <td className="td-qty">{item.units_dispatched}/{item.units_ordered}</td>
+                                                                            <td className="td-qty">{fmt(item.batch_qty_kg, 3)}</td>
+                                                                            <td className="td-price">{fmt(item.selling_price)}</td>
+                                                                            <td className="td-price">{(displayUnits*(item.batch_qty_kg||0)*(item.selling_price||0)).toFixed(2)}</td>
+                                                                            <td>
+                                                                                <button className={`ol-ready-btn${item.is_ready ? " ready" : ""}`}
+                                                                                    onClick={() => handleToggleReady(o.order_id, item.item_id, !item.is_ready)}>
+                                                                                    {item.is_ready ? "✓ Ready" : "✕ Not Ready"}
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                        );
+                                                                    })}
+                                                                </tbody>
+                                                            </table>
+                                                            <table className="ol-summary-table">
+                                                                <tbody>
+                                                                    {dc > 0 && (
+                                                                        <tr>
+                                                                            <td colSpan={8} className="ol-summary-label">Delivery Charge</td>
+                                                                            <td className="td-price ol-summary-val">+{dc.toFixed(2)}</td>
+                                                                            <td></td>
+                                                                        </tr>
+                                                                    )}
+                                                                    <tr>
+                                                                        <td colSpan={8} className="ol-summary-label">GST (18%)</td>
+                                                                        <td className="td-price ol-summary-val">+{gst.toFixed(2)}</td>
+                                                                        <td></td>
+                                                                    </tr>
+                                                                    <tr className="ol-summary-total">
+                                                                        <td colSpan={8} className="ol-summary-label">Total (incl. GST)</td>
+                                                                        <td className="td-price ol-summary-val"><strong>{totalWithGst.toFixed(2)}</strong></td>
+                                                                        <td></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                            </>
                                                         );
                                                     })()}
                                                 </td>
@@ -249,6 +414,32 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
             )}
 
             <button className="ol-fab" onClick={onNewOrder} title="Place new order">+</button>
+        </div>
+    );
+}
+
+// ── Wrapper with Sales / Purchase sub-tabs ────────────────────
+function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
+{
+    const [subTab, setSubTab] = useState("sales");
+    return (
+        <div>
+            <div className="ol-subtab-bar">
+                <button className={`ol-subtab-btn${subTab === "sales" ? " active" : ""}`}
+                    onClick={() => setSubTab("sales")}>Sales Orders</button>
+                <button className={`ol-subtab-btn${subTab === "purchase" ? " active" : ""}`}
+                    onClick={() => setSubTab("purchase")}>Purchase Orders</button>
+            </div>
+            {subTab === "sales" ? (
+                <SalesOrderList
+                    onEditOrder={onEditOrder}
+                    onNewOrder={onNewOrder}
+                    refreshKey={refreshKey}
+                    onOrderDelete={onOrderDelete}
+                />
+            ) : (
+                <PurchaseOrder />
+            )}
         </div>
     );
 }
