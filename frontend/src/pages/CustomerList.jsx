@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import "../styles/customer.css";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getShippingAddresses } from "../api";
 import ComboInput from "../components/ComboInput";
 import ModalOverlay from "../components/ModalOverlay";
 
-function CustomerList({ goBack, customers, setCustomers })
+function CustomerList({ goBack, customers, setCustomers, privileges, createTrigger })
 {
     const [formMode,      setFormMode]      = useState(null);
     const [editingId,     setEditingId]     = useState(null);
@@ -29,7 +29,7 @@ function CustomerList({ goBack, customers, setCustomers })
         emails: [""],
         phones: [""],
         address: "", pincode: "", city: "", state: "", gst: "",
-        shippingAddresses: [{ address: "", pincode: "", city: "", state: "", is_default: true, copyBilling: true }]
+        shippingAddresses: [{ address: "", pincode: "", city: "", state: "", is_default: true, copyBilling: false }]
     };
 
     const [formData, setFormData] = useState(emptyForm);
@@ -41,6 +41,11 @@ function CustomerList({ goBack, customers, setCustomers })
             .catch(err => setApiError(err.message || "Failed to load customers"))
             .finally(() => setLoading(false));
     }, []);
+
+    // Open add form when triggered from quick actions
+    useLayoutEffect(() => {
+        if (createTrigger > 0) openAddForm();
+    }, [createTrigger]);
 
     // Auto-retry when window regains focus if there was an error
     useEffect(() => {
@@ -236,7 +241,7 @@ function CustomerList({ goBack, customers, setCustomers })
                 confirmLabel="Yes, Delete" cancelLabel="Cancel"
                 onConfirm={confirmDelete} onCancel={() => setDeleteConfirm(null)} />
 
-            {!formOpen && <button className="customer-fab" onClick={openAddForm} title="Add new customer">+</button>}
+            {!formOpen && privileges?.create !== false && <button className="customer-fab" onClick={openAddForm} title="Add new customer">+</button>}
 
             {/* ── View Modal ── */}
             {viewingCustomer && (
@@ -452,8 +457,8 @@ function CustomerList({ goBack, customers, setCustomers })
                                     <td>{customer.gst}</td>
                                     <td className="col-actions">
                                         <button className="view-btn" title="View" onClick={() => setViewingCustomer(customer)}>🔍</button>
-                                        <button className="edit-btn" onClick={() => handleEditClick(customer)}>✎</button>
-                                        <button className="delete-btn" onClick={() => handleDeleteClick(customer)}>🗑</button>
+                                        {privileges?.edit !== false && <button className="edit-btn" onClick={() => handleEditClick(customer)}>✎</button>}
+                                        {privileges?.delete !== false && <button className="delete-btn" onClick={() => handleDeleteClick(customer)}>🗑</button>}
                                     </td>
                                 </tr>
                             ))}

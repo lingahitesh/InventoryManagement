@@ -1,17 +1,19 @@
-.dispatch-container { padding: 10px; }
+.dispatch-container { padding: 0; animation: revealFadeIn 0.4s ease; }
+@keyframes revealFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-.dispatch-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.dispatch-header-row h1 { margin: 0; font-size: 26px; color: #1a1a2e; }
+.dispatch-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.dispatch-header-row h1 { margin: 0; font-size: 26px; font-weight: 700; color: #1a1a2e; letter-spacing: -0.02em; }
 .dispatch-toolbar { display: flex; gap: 8px; }
 
 .dispatch-error { background: #fdecea; color: #c0392b; border: 1px solid #e74c3c; border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; font-weight: 600; }
 .dispatch-placeholder { padding: 40px; text-align: center; color: #999; border: 2px dashed #ddd; border-radius: 8px; }
 
-.dispatch-table-wrapper { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
-.dispatch-table { width: 100%; border-collapse: collapse; font-size: 14px; background: white; border-radius: 10px; overflow: hidden; table-layout: fixed; }
-.dispatch-table th { background: #1a1a2e; color: white; padding: 10px 14px; text-align: left; font-size: 12px; text-transform: uppercase; }
-.dispatch-table td { padding: 10px 14px; border-bottom: 1px solid #eee; vertical-align: middle;  font-weight: 600;}
-.dispatch-table tbody tr:hover { background: #f8f9fa; }
+.dispatch-table-wrapper { overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05); }
+.dispatch-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; background: white; border-radius: 12px; overflow: hidden; table-layout: fixed; }
+.dispatch-table th { background: #1a1a2e; color: white; padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+.dispatch-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f5; vertical-align: middle; font-weight: 600;}
+.dispatch-table tbody tr { transition: background 0.15s; }
+.dispatch-table tbody tr:hover { background: #f8faff; }
 
 /* Dispatch main table column widths: ID | Dispatched Through | Total Units | Created | Actions */
 .dispatch-table th:nth-child(1), .dispatch-table td:nth-child(1) { width: 20%; }
@@ -51,8 +53,8 @@
 
 /* Per-order metadata grid */
 .dispatch-meta-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 8px; margin-bottom: 10px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 10px;
 }
 .dm-field { display: flex; flex-direction: column; gap: 3px; }
 .dm-field label { font-size: 11px; font-weight: 600; color: #666; }
@@ -61,7 +63,6 @@
     font-size: 12px; color: #1a1a2e; transition: border-color 0.2s;
 }
 .dm-field input:focus { outline: none; border-color: #4fc3f7; }
-.dm-field-wide { grid-column: span 2; }
 
 /* Items selection table inside card */
 .dispatch-items-select-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }

@@ -7,6 +7,7 @@ from backend.routers.product_router import router as product_router
 from backend.routers.dispatch_router import router as dispatch_router
 from backend.routers.payment_router import router as payment_router
 from backend.routers.purchase_order_router import router as purchase_order_router
+from backend.routers.auth_router import router as auth_router
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
@@ -38,6 +39,7 @@ app.include_router(product_router)
 app.include_router(dispatch_router)
 app.include_router(payment_router)
 app.include_router(purchase_order_router)
+app.include_router(auth_router)
 
 @app.get("/")
 def root():

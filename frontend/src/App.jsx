@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 import "./App.css";
 
@@ -11,12 +11,32 @@ import CustomerList from "./pages/CustomerList";
 import OrderList    from "./pages/OrderList";
 import Dispatch     from "./pages/Dispatch";
 import Payment      from "./pages/Payment";
+import Profile      from "./pages/Profile";
 import ModalOverlay from "./components/ModalOverlay";
 import { getInventory } from "./api";
 
 function App()
 {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    // ── Session persistence (localStorage, 4hr TTL) ──────────
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        const session = localStorage.getItem("session");
+        if (!session) return false;
+        try {
+            const { expiry } = JSON.parse(session);
+            if (Date.now() > expiry) { localStorage.removeItem("session"); return false; }
+            return true;
+        } catch { localStorage.removeItem("session"); return false; }
+    });
+    const [currentUser, setCurrentUser] = useState(() => {
+        const session = localStorage.getItem("session");
+        if (!session) return null;
+        try { return JSON.parse(session).user; } catch { return null; }
+    });
+    const [privileges, setPrivileges] = useState(() => {
+        const session = localStorage.getItem("session");
+        if (!session) return {};
+        try { return JSON.parse(session).privileges || {}; } catch { return {}; }
+    });
     const [customers,       setCustomers]       = useState([]);
 
     // ── Shared inventory state ───────────────────────────────
@@ -54,16 +74,54 @@ function App()
     const [activeTab, setActiveTab] = useState("home");
     const closeGuards = useRef({});
 
+    // ── Smart Collapsible Header ─────────────────────────────
+    const [navHidden, setNavHidden] = useState(false);
+    const lastScrollY = useRef(0);
+    const ticking = useRef(false);
+
+    useEffect(() => {
+        const onScroll = () => {
+            if (ticking.current) return;
+            ticking.current = true;
+            requestAnimationFrame(() => {
+                const currentY = window.scrollY;
+                const delta = currentY - lastScrollY.current;
+
+                if (delta > 5 && currentY > 50) {
+                    // Scrolling down past threshold — hide
+                    setNavHidden(true);
+                } else if (delta < -5) {
+                    // Scrolling up by at least 5px — show
+                    setNavHidden(false);
+                }
+
+                lastScrollY.current = currentY;
+                ticking.current = false;
+            });
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+
     const registerCloseGuard = (tabId, fn) => { closeGuards.current[tabId] = fn; };
 
-    const handleLogin  = () => setIsAuthenticated(true);
+    const handleLogin  = (user, privs) => {
+        const session = { user, privileges: privs || {}, expiry: Date.now() + 4 * 60 * 60 * 1000 }; // 4 hours
+        localStorage.setItem("session", JSON.stringify(session));
+        setIsAuthenticated(true);
+        setCurrentUser(user);
+        setPrivileges(privs || {});
+    };
     const handleLogout = () =>
     {
+        localStorage.removeItem("session");
         setIsAuthenticated(false);
+        setCurrentUser(null);
+        setPrivileges({});
         setTabs([{ id: "home", title: "Home" }]);
         setActiveTab("home");
         setCart([]);
-        setEditRecordMap({});
+        setShowProfileModal(false);
         closeGuards.current = {};
     };
 
@@ -88,12 +146,13 @@ function App()
     };
 
     const closeCurrentTab = () => doCloseTab(activeTab);
-    const switchTab = (id) => setActiveTab(id);
+    const switchTab = (id) => { setActiveTab(id); requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" })); };
 
     const openTab = (id, title) =>
     {
         if (!tabs.find(t => t.id === id)) setTabs(prev => [...prev, { id, title }]);
-        switchTab(id);
+        setActiveTab(id);
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
     };
 
     const goBack = () =>
@@ -108,6 +167,14 @@ function App()
     const [showFeedingModal, setShowFeedingModal] = useState(false);
     const [showViewModal,    setShowViewModal]    = useState(false);
     const [showOrderModal,   setShowOrderModal]   = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+
+    // Triggers for quick actions to open create forms in child components
+    const [poCreateTrigger, setPoCreateTrigger] = useState(0);
+    const [salesSubTabTrigger, setSalesSubTabTrigger] = useState(0);
+    const [dispatchCreateTrigger, setDispatchCreateTrigger] = useState(0);
+    const [customerCreateTrigger, setCustomerCreateTrigger] = useState(0);
+    const [paymentCreateTrigger, setPaymentCreateTrigger] = useState(0);
 
     const openEditInventory = useCallback((record) =>
     {
@@ -118,19 +185,29 @@ function App()
     if (!isAuthenticated) return <Login onLogin={handleLogin} />;
 
     const NAV_TABS = [
-        { id: "retrieval",  title: "Inventory" },
-        { id: "customer",   title: "Customer List" },
-        { id: "orderlist",  title: "Order List" },
-        { id: "dispatch",   title: "Dispatch" },
-        { id: "payment",    title: "Payment" },
+        { id: "retrieval",  title: "Inventory",     module: "inventory" },
+        { id: "customer",   title: "Customer List", module: "customer" },
+        { id: "orderlist",  title: "Order List",    module: "sales_order" },
+        { id: "dispatch",   title: "Dispatch",      module: "dispatch" },
+        { id: "payment",    title: "Payment",       module: "payment" },
     ];
+
+    // Filter nav tabs based on user privileges (view permission required)
+    const visibleNavTabs = NAV_TABS.filter(nav => {
+        if (nav.id === "orderlist") {
+            // Show Order List if either sales_order or purchase_order has view
+            return (privileges.sales_order?.view !== false) || (privileges.purchase_order?.view !== false);
+        }
+        const modPriv = privileges[nav.module];
+        return modPriv && modPriv.view;
+    });
 
     return (
         <div className="app">
 
-            <div className="tab-bar">
+            <div className={`tab-bar${navHidden ? " tab-bar-hidden" : ""}`}>
                 <div className={activeTab === "home" ? "tab active" : "tab"} onClick={() => switchTab("home")}>Home</div>
-                {NAV_TABS.map(nav => (
+                {visibleNavTabs.map(nav => (
                     <div key={nav.id} className={activeTab === nav.id ? "tab active" : "tab"}
                         onClick={() => openTab(nav.id, nav.title)}>{nav.title}</div>
                 ))}
@@ -142,11 +219,25 @@ function App()
                 ))}
             </div>
 
+            {/* Profile button */}
+            <div className={`profile-btn-wrap${navHidden ? " tab-bar-hidden" : ""}`}>
+                <button className="profile-btn" onClick={() => setShowProfileModal(true)}>
+                    {currentUser ? currentUser.fname[0] + (currentUser.lname?.[0] || "") : "?"}
+                </button>
+            </div>
+
             <div className="content">
 
                 {/* ── Home ── */}
                 <div style={{ display: activeTab === "home" ? "block" : "none" }}>
-                    <Home openTab={openTab} onLogout={handleLogout}
+                    <Home openTab={openTab}
+                        onAddInventory={() => { openTab("retrieval", "Inventory"); setShowFeedingModal(true); }}
+                        onCreateSalesOrder={() => { openTab("orderlist", "Order List"); setSalesSubTabTrigger(k => k + 1); setShowOrderModal(true); }}
+                        onCreatePurchaseOrder={() => { openTab("orderlist", "Order List"); setPoCreateTrigger(k => k + 1); }}
+                        onCreateDispatch={() => { openTab("dispatch", "Dispatch"); setDispatchCreateTrigger(k => k + 1); }}
+                        onAddCustomer={() => { openTab("customer", "Customer List"); setCustomerCreateTrigger(k => k + 1); }}
+                        onNewPayment={() => { openTab("payment", "Payment"); setPaymentCreateTrigger(k => k + 1); }}
+                        currentUser={currentUser}
                         inventory={inventory} inventoryLoading={inventoryLoading}
                         inventoryError={inventoryError} refreshInventory={refreshInventory} />
                 </div>
@@ -164,6 +255,8 @@ function App()
                             setShowOrderModal(true);
                         }}
                         refreshKey={inventoryRefreshKey}
+                        privileges={privileges.inventory}
+                        canCreateOrder={privileges.sales_order?.create !== false}
                     />
                     {/* Feeding overlay on Inventory tab */}
                     {showFeedingModal && (
@@ -199,7 +292,9 @@ function App()
                 {/* ── Customer List ── */}
                 <div style={{ display: activeTab === "customer" ? "block" : "none" }}>
                     <CustomerList goBack={() => setActiveTab("home")}
-                        customers={customers} setCustomers={setCustomers} />
+                        customers={customers} setCustomers={setCustomers}
+                        privileges={privileges.customer}
+                        createTrigger={customerCreateTrigger} />
                 </div>
 
                 {/* ── Order List ── */}
@@ -209,11 +304,14 @@ function App()
                         onNewOrder={() => setShowOrderModal(true)}
                         refreshKey={orderRefreshKey}
                         onOrderDelete={() => { refreshInventory(); setInventoryRefreshKey(k => k + 1); }}
+                        privileges={{ ...privileges.sales_order, _po: privileges.purchase_order }}
+                        poCreateTrigger={poCreateTrigger}
+                        salesSubTabTrigger={salesSubTabTrigger}
                     />
                     {/* Place Order overlay on Order List tab */}
                     {showOrderModal && (
                         <ModalOverlay open={true}
-                            title={editingOrder ? `Edit Order #${editingOrder.order_id}` : "Place Order"}
+                            title={editingOrder ? `Edit Order #${editingOrder.order_id}` : "Place Sales Order"}
                             onClose={() => { setShowOrderModal(false); setEditingOrder(null); setCart([]); }}>
                             <PlaceOrder
                                 isActive={showOrderModal}
@@ -232,15 +330,22 @@ function App()
 
                 {/* ── Dispatch ── */}
                 <div style={{ display: activeTab === "dispatch" ? "block" : "none" }}>
-                    <Dispatch onDispatchSuccess={() => setOrderRefreshKey(k => k + 1)} />
+                    <Dispatch onDispatchSuccess={() => setOrderRefreshKey(k => k + 1)} privileges={privileges.dispatch} createTrigger={dispatchCreateTrigger} />
                 </div>
 
                 {/* ── Payment ── */}
                 <div style={{ display: activeTab === "payment" ? "block" : "none" }}>
-                    <Payment />
+                    <Payment privileges={privileges.payment} createTrigger={paymentCreateTrigger} />
                 </div>
 
             </div>
+
+            {/* ── Profile Modal ── */}
+            {showProfileModal && (
+                <ModalOverlay open={true} title="Profile" onClose={() => setShowProfileModal(false)}>
+                    <Profile currentUser={currentUser} onLogout={handleLogout} onClose={() => setShowProfileModal(false)} />
+                </ModalOverlay>
+            )}
 
         </div>
     );

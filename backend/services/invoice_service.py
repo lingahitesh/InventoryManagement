@@ -31,6 +31,36 @@ def _get_hsn(sku_type, sku_subtype):
     return m.get((str(sku_type).upper(), str(sku_subtype).upper()), "39206220")
 
 
+def _extract_thickness(sku_subtype):
+    """Extract thickness/micron/gauge number from a subtype string.
+    Examples:
+        'PET 12 MIC UNTREATED' -> '12'
+        'NATURAL LD 100 GAUGE' -> '100'
+        'Transparent Heat Sealable - 25-50 MIC' -> '25'
+        'MET CPP 20 MIC' -> '20'
+    Returns the number string or empty string if not found.
+    """
+    import re
+    sub_upper = (sku_subtype or "").upper()
+    # Pattern: number before MIC or GAUGE
+    m = re.search(r'(\d+)(?:-\d+)?\s*(?:MIC|GAUGE)', sub_upper)
+    if m:
+        return m.group(1)
+    return ""
+
+
+def _extract_ld_color(sku_subtype):
+    """Extract color variant from LD subtype: NATURAL/MILKY/COLORED."""
+    sub_upper = (sku_subtype or "").upper()
+    if "NATURAL" in sub_upper:
+        return "Natural"
+    elif "MILKY" in sub_upper:
+        return "Milky"
+    elif "COLOR" in sub_upper:
+        return "Colored"
+    return ""
+
+
 def _num_to_words(n):
     ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
             "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen",
@@ -155,7 +185,7 @@ def _draw_table_header(pdf, y_start):
     pdf.set_xy(503, y_start + 4); pdf.cell(95, 18, "Amount")
 
 
-def generate_invoice_pdf(order_id, item_ids=None) -> bytes:
+def generate_invoice_pdf(order_id, item_ids=None, include_delivery=True) -> bytes:
     order = get_order_full(order_id)
     if not order: return None
     items = get_order_items(order_id)
@@ -191,7 +221,10 @@ def generate_invoice_pdf(order_id, item_ids=None) -> bytes:
         sku_dim = item.get("sku_dim") or ""
         hsn = _get_hsn(sku_type, sku_subtype)
 
-        desc = f"{sku_type} FILM {'METALIZED' if 'MET' in sku_type.upper() else 'PLAIN'}"
+        if sku_type.upper() == "LD":
+            desc = "LD FILM PLAIN"
+        else:
+            desc = f"{sku_type} FILM {'METALIZED' if 'MET' in sku_type.upper() else 'PLAIN'}"
 
         # Merge key: same description + hsn (same product category heading)
         merge_key = (desc, hsn)
@@ -213,7 +246,8 @@ def generate_invoice_pdf(order_id, item_ids=None) -> bytes:
                         break
                 if not merged_sub:
                     existing["sub_lines"].append({
-                        "key": sub_key, "sku_type": sku_type, "sku_dim": sku_dim,
+                        "key": sub_key, "sku_type": sku_type, "sku_subtype": sku_subtype,
+                        "sku_dim": sku_dim,
                         "batch_kg": batch_kg, "units": units, "price": price,
                         "qty_kgs": qty_kgs, "amount": amount
                     })
@@ -226,7 +260,8 @@ def generate_invoice_pdf(order_id, item_ids=None) -> bytes:
                 "sku_type": sku_type, "sku_dim": sku_dim, "batch_kg": batch_kg,
                 "sub_lines": [{
                     "key": (sku_type, sku_dim, batch_kg, price), "sku_type": sku_type,
-                    "sku_dim": sku_dim, "batch_kg": batch_kg, "units": units,
+                    "sku_subtype": sku_subtype, "sku_dim": sku_dim,
+                    "batch_kg": batch_kg, "units": units,
                     "price": price, "qty_kgs": qty_kgs, "amount": amount
                 }],
                 "_merge_key": merge_key
@@ -236,7 +271,7 @@ def generate_invoice_pdf(order_id, item_ids=None) -> bytes:
         grand_total_amt += amount
         hsn_groups[hsn] = hsn_groups.get(hsn, 0) + amount
 
-    delivery_charge = float(order.get("delivery_charge") or 0)
+    delivery_charge = float(order.get("delivery_charge") or 0) if include_delivery else 0
     taxable_amount = grand_total_amt + delivery_charge
 
     # Add delivery charge to HSN groups if present
@@ -378,7 +413,18 @@ def _draw_item_row(pdf, y, sl, d):
     sub_y = y + 14
     for sub in sub_lines:
         pdf.set_xy(97, sub_y); pdf.set_font("Helvetica", "", 7)
-        line_text = f'" {sub["sku_type"]} {sub["sku_dim"]} = {sub["batch_kg"]:.3f}  {sub["units"]}R "'
+        sku_type_s = sub["sku_type"]
+        sku_dim_s = sub["sku_dim"]
+        thickness = _extract_thickness(sub.get("sku_subtype", ""))
+
+        if sku_type_s.upper() == "LD":
+            color = _extract_ld_color(sub.get("sku_subtype", ""))
+            color_part = f"({color}) " if color else ""
+            thickness_part = f" X {thickness}" if thickness else ""
+            line_text = f'" LD {color_part}{sku_dim_s}{thickness_part} = {sub["batch_kg"]:.3f}  {sub["units"]}R "'
+        else:
+            thickness_part = f" X {thickness}" if thickness else ""
+            line_text = f'" {sku_type_s} {sku_dim_s}{thickness_part} = {sub["batch_kg"]:.3f}  {sub["units"]}R "'
         pdf.cell(200, 10, line_text)
         # Show per-sub-line rate and amount if multiple prices exist
         if not has_single_price:
@@ -397,7 +443,7 @@ def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, i
 
     # Subtotal amount
     pdf.set_xy(484, y + 2); pdf.set_font("Helvetica", "B", 8); pdf.cell(76, 12, f"{grand_total_amt:,.2f}", align="R")
-    y += 15
+    y += 13
 
     # Delivery charge (only if > 0)
     if delivery_charge > 0:
@@ -542,7 +588,7 @@ def _draw_totals_and_footer(pdf, grand_total_qty, grand_total_amt, sgst, cgst, i
     # Bank details (right side)
     pdf.set_xy(300, footer_y + 3); pdf.set_font("Helvetica", "B", 7); pdf.cell(150, 10, "Company's Bank Details")
     pdf.set_xy(300, footer_y + 13); pdf.set_font("Helvetica", "", 7)
-    pdf.multi_cell(240, 9, "A/c Holder's Name : CHAMPA POLYPLAST PRIVATE LIMITED\nBank Name          : HDFC 50200032666990\nA/c No.            : 50200032666990\nBranch & IFS Code  : 19 ARMENIAN STREET & HDFC0001926\nSWIFT Code         :")
+    pdf.multi_cell(240, 9, "A/c Holder's Name  : CHAMPA POLYPLAST PRIVATE LIMITED\nBank Name             : HDFC 50200032666990\nA/c No.                    : 50200032666990\nBranch & IFS Code : 19 ARMENIAN STREET & HDFC0001926\nSWIFT Code           :")
 
     # Company signature (right bottom)
     pdf.rect(300,footer_y + 57.5, 262, 30.5)

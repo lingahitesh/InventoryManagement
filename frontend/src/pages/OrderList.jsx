@@ -5,8 +5,18 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import ModalOverlay from "../components/ModalOverlay";
 import ComboInput from "../components/ComboInput";
 import PurchaseOrder from "./PurchaseOrder";
+function formatOrderNo(orderId)
+{
+    const now = new Date();
+    const year = now.getFullYear() % 100;
+    const month = now.getMonth() + 1;
 
-function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
+    const fyStart = month >= 4 ? year : year - 1;
+    const fyEnd = fyStart + 1;
+
+    return `CP/${String(orderId).padStart(4, "0")}/${fyStart}-${String(fyEnd).padStart(2, "0")}`;
+}
+function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete, privileges })
 {
     const [orders,   setOrders]   = useState([]);
     const [loading,  setLoading]  = useState(true);
@@ -15,8 +25,9 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
     const [viewMode, setViewMode] = useState("all"); // "all" | "pending" | "completed"
 
     const [searchCustomer, setSearchCustomer] = useState("");
-    const [searchDateFrom, setSearchDateFrom] = useState("");
-    const [searchDateTo,   setSearchDateTo]   = useState("");
+    const [searchOrderId,  setSearchOrderId]  = useState("");
+    const [searchDateFrom, setSearchDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toLocaleDateString("en-CA"); });
+    const [searchDateTo,   setSearchDateTo]   = useState(() => new Date().toLocaleDateString("en-CA"));
     const [searchContact,  setSearchContact]  = useState("");
     const [customersList,  setCustomersList]  = useState([]);
     const [deleteTarget,   setDeleteTarget]   = useState(null);
@@ -24,6 +35,7 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
     const [piOrder,        setPiOrder]        = useState(null);
     const [piItems,        setPiItems]        = useState([]);
     const [piSelected,     setPiSelected]     = useState([]);
+    const [piIncludeDelivery, setPiIncludeDelivery] = useState(true);
 
     const initialLoadDone = useRef(false);
 
@@ -100,12 +112,15 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
 
     const filtered = orders.filter(o =>
     {
-        // Status filter: all shows everything, pending shows pending+partial, completed shows completed+partial
+        // Status filter
         const statusMatch = viewMode === "all" ? true
             : viewMode === "pending"
-                ? (o.dispatch_status === "pending" || o.dispatch_status === "partial")
-                : (o.dispatch_status === "completed" || o.dispatch_status === "partial");
+                ? (o.dispatch_status === "pending")
+                : viewMode === "inprocess"
+                    ? (o.dispatch_status === "partial")
+                    : (o.dispatch_status === "completed");
         const nm = !searchCustomer.trim() || (o.customer_name || "").toLowerCase().includes(searchCustomer.toLowerCase());
+        const idMatch = !searchOrderId.trim() || String(o.order_id).includes(searchOrderId.trim());
         const dtFrom = !searchDateFrom || (o.order_date || "") >= searchDateFrom;
         const dtTo   = !searchDateTo   || (o.order_date || "").slice(0,10) <= searchDateTo;
         let contactMatch = true;
@@ -116,7 +131,7 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                 .map(c => c.customer_id);
             contactMatch = matchingIds.includes(o.customer_id);
         }
-        return statusMatch && nm && dtFrom && dtTo && contactMatch;
+        return statusMatch && nm && idMatch && dtFrom && dtTo && contactMatch;
     });
 
     const fmt    = (v, d = 2) => v != null ? parseFloat(v).toFixed(d) : "—";
@@ -174,13 +189,28 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                         ))}
                                     </tbody>
                                 </table>
+                                <div className="pi-delivery-check">
+                                    {piOrder.delivery_charge > 0 && (
+                                        <label>
+                                            <input type="checkbox" checked={piIncludeDelivery}
+                                                onChange={e => setPiIncludeDelivery(e.target.checked)} />
+                                            Include Delivery Charge
+                                        </label>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Preview iframe */}
                             <div className="pi-preview">
                                 <iframe
                                     title="PI Preview"
-                                    src={`/api/orders/${piOrder.order_id}/invoice${piSelected.length < piItems.length ? `?item_ids=${piSelected.join(",")}` : ""}`}
+                                    src={`/api/orders/${piOrder.order_id}/invoice${(() => {
+                                        const params = new URLSearchParams();
+                                        if (piSelected.length < piItems.length) params.set("item_ids", piSelected.join(","));
+                                        if (!piIncludeDelivery) params.set("no_delivery", "1");
+                                        const qs = params.toString();
+                                        return qs ? `?${qs}` : "";
+                                    })()}`}
                                     style={{ width: "100%", height: "500px", border: "1px solid #ddd", borderRadius: 8 }}
                                 />
                             </div>
@@ -189,12 +219,18 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                         <div className="pi-dialog-actions">
                             <button className="cancel-btn" onClick={() => setShowPiDialog(false)}>Close</button>
                             <button className="submit-btn" onClick={() => {
-                                const url = `/api/orders/${piOrder.order_id}/invoice${piSelected.length < piItems.length ? `?item_ids=${piSelected.join(",")}` : ""}`;
-                                window.open(url, "_blank");
+                                const params = new URLSearchParams();
+                                if (piSelected.length < piItems.length) params.set("item_ids", piSelected.join(","));
+                                if (!piIncludeDelivery) params.set("no_delivery", "1");
+                                const qs = params.toString();
+                                window.open(`/api/orders/${piOrder.order_id}/invoice${qs ? `?${qs}` : ""}`, "_blank");
                             }}>📥 Download</button>
                             <button className="submit-btn" style={{ background: "#2e7d32" }} onClick={() => {
-                                const url = `/api/orders/${piOrder.order_id}/invoice${piSelected.length < piItems.length ? `?item_ids=${piSelected.join(",")}` : ""}`;
-                                const w = window.open(url, "_blank");
+                                const params = new URLSearchParams();
+                                if (piSelected.length < piItems.length) params.set("item_ids", piSelected.join(","));
+                                if (!piIncludeDelivery) params.set("no_delivery", "1");
+                                const qs = params.toString();
+                                const w = window.open(`/api/orders/${piOrder.order_id}/invoice${qs ? `?${qs}` : ""}`, "_blank");
                                 setTimeout(() => { if (w) w.print(); }, 1000);
                             }}>🖨 Print</button>
                         </div>
@@ -203,24 +239,29 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
             )}
 
             <div className="order-list-header">
-                <h1>Order List</h1>
+                <h1>Sales Orders</h1>
                 <div className="ol-toggle">
                     <button className={`ol-toggle-btn${viewMode === "all" ? " active" : ""}`}
                         onClick={() => setViewMode("all")}>All</button>
                     <button className={`ol-toggle-btn${viewMode === "pending" ? " active" : ""}`}
                         onClick={() => setViewMode("pending")}>Pending</button>
-                    <button className={`ol-toggle-btn${viewMode === "completed" ? " active" : ""}`}
-                        onClick={() => setViewMode("completed")}>Completed</button>
+                    <button className={`ol-toggle-btn${viewMode === "inprocess" ? " active" : ""}`}
+                        onClick={() => setViewMode("inprocess")}>In-Process</button>
+                    <button className={`ol-toggle-btn${viewMode === "dispatched" ? " active" : ""}`}
+                        onClick={() => setViewMode("dispatched")}>Dispatched</button>
                 </div>
                 <div className="order-list-toolbar">
                     <button className="ol-refresh-btn" onClick={() => { setExpanded({}); fetchOrders(true); }} disabled={loading}>↻</button>
-                    <button className="ol-clear-btn" onClick={() => { setSearchCustomer(""); setSearchDateFrom(""); setSearchDateTo(""); setSearchContact(""); }}>✕ Clear</button>
+                    <button className="ol-clear-btn" onClick={() => { setSearchCustomer(""); setSearchOrderId(""); setSearchDateFrom(""); setSearchDateTo(""); setSearchContact(""); }}>✕ Clear</button>
                 </div>
             </div>
 
             {error && <div className="ol-error">{error}</div>}
 
             <div className="ol-search-bar">
+                <div className="ol-search-field"><label>Order ID</label>
+                    <input value={searchOrderId} onChange={e => setSearchOrderId(e.target.value)} placeholder="ID…" />
+                </div>
                 <div className="ol-search-field"><label>Customer</label>
                     <ComboInput value={searchCustomer} onChange={e => setSearchCustomer(e.target.value)}
                         options={customersList.map(c => [c.fname, c.mname, c.lname].filter(Boolean).join(" "))}
@@ -247,12 +288,15 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                     <table className="ol-table">
                         <thead>
                             <tr>
-                                <th>ID</th><th>Customer</th><th>Shipping Address</th><th>Order Date</th>
+                                <th>Invoice No.</th>
+                                <th>Customer</th>
+                                <th>Shipping Address</th>
+                                <th>Order Date</th>
                                 <th className="th-qty">Units</th>
-                                <th className="th-qty">Total Qty (kgs)</th>
+                                <th className="th-qty">Qty (kgs)</th>
                                 <th className="th-price">Subtotal (₹)</th>
-                                <th className="th-price">Total w/ GST (₹)</th>
-                                <th>Status</th>
+                                <th className="th-price">Incl. GST (₹)</th>
+                                <th style={{textAlign:"center"}}>Status</th>
                                 <th className="col-actions"></th>
                             </tr>
                         </thead>
@@ -263,8 +307,8 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                 const isOpen = exp?.open ?? false;
                                 return (
                                     <Fragment key={o.order_id}>
-                                        <tr className={o.is_all_ready ? "ol-row-ready" : ""}>
-                                            <td>{o.order_id}</td>
+                                        <tr className={o.is_all_ready && o.dispatch_status !== "completed" ? "ol-row-ready" : ""}>
+                                            <td>{formatOrderNo(o.order_id)}</td>
                                             <td>{o.customer_name}</td>
                                             <td>{o.shipping_address || "—"}</td>
                                             <td>{o.order_date ? o.order_date.slice(0, 10) : "—"}</td>
@@ -276,9 +320,10 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                                 viewMode === "completed" ? (o.dispatched_amount + (o.delivery_charge || 0)) * 1.18 :
                                                 o.total_with_gst
                                             )}</td>
-                                            <td><span className={`ol-status ol-status--${o.dispatch_status || "pending"}`}>{o.dispatch_status || "pending"}</span></td>
+                                            <td style={{textAlign:"center"}}><span className={`ol-status ol-status--${o.dispatch_status === "partial" ? "inprocess" : o.dispatch_status === "completed" ? "dispatched" : (o.dispatch_status || "pending")}`}>{o.dispatch_status === "partial" ? "In-Process" : o.dispatch_status === "completed" ? "Dispatched" : (o.dispatch_status || "pending")}</span></td>
                                             <td className="col-actions">
-                                                <button className={`ol-ready-btn${o.is_all_ready ? " ready" : ""}`}
+                                                {privileges?.status !== false && <button className={`ol-ready-btn${o.is_all_ready || o.dispatch_status === "completed" ? " ready" : ""}`}
+                                                    disabled={o.dispatch_status === "completed"}
                                                     onClick={async () => {
                                                         let items = expanded[o.order_id]?.items;
                                                         if (!items || items.length === 0) {
@@ -294,9 +339,9 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                                             setExpanded(prev=>({...prev,[o.order_id]:{...prev[o.order_id],items:fresh}}));
                                                         }
                                                     }}>
-                                                    {o.is_all_ready ? "✓" : "✕"}
-                                                </button>
-                                                <button className="ol-pi-btn" onClick={async () => {
+                                                    {o.is_all_ready || o.dispatch_status === "completed" ? "✓" : "✕"}
+                                                </button>}
+                                                {privileges?.generate !== false && <button className="ol-pi-btn" onClick={async () => {
                                                     // Load items for PI dialog
                                                     let items = expanded[o.order_id]?.items;
                                                     if (!items || items.length === 0) {
@@ -312,9 +357,9 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                                     setPiItems(items);
                                                     setPiSelected(preSelected);
                                                     setShowPiDialog(true);
-                                                }} title="Proforma Invoice">📄</button>
-                                                <button className="ol-edit-btn" onClick={() => handleEdit(o)}>✎</button>
-                                                <button className="ol-delete-btn" onClick={() => handleDelete(o)}>🗑</button>
+                                                }} title="Proforma Invoice">📄</button>}
+                                                {privileges?.edit !== false && <button className="ol-edit-btn" disabled={o.dispatch_status === "completed"} onClick={() => handleEdit(o)}>✎</button>}
+                                                {privileges?.delete !== false && <button className="ol-delete-btn" onClick={() => handleDelete(o)}>🗑</button>}
                                                 <button className="ol-details-btn" onClick={() => toggleExpand(o.order_id)}>
                                                     {isOpen ? "▲ Hide" : "▼ Details"}
                                                 </button>
@@ -368,10 +413,22 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                                                             <td className="td-price">{fmt(item.selling_price)}</td>
                                                                             <td className="td-price">{(displayUnits*(item.batch_qty_kg||0)*(item.selling_price||0)).toFixed(2)}</td>
                                                                             <td>
-                                                                                <button className={`ol-ready-btn${item.is_ready ? " ready" : ""}`}
-                                                                                    onClick={() => handleToggleReady(o.order_id, item.item_id, !item.is_ready)}>
-                                                                                    {item.is_ready ? "✓ Ready" : "✕ Not Ready"}
-                                                                                </button>
+                                                                                {privileges?.status !== false ? (() => {
+                                                                                    const fullyDispatched = item.units_dispatched >= item.units_ordered;
+                                                                                    const orderDispatched = o.dispatch_status === "completed";
+                                                                                    const forceGreen = fullyDispatched || orderDispatched;
+                                                                                    return (
+                                                                                        <button className={`ol-ready-btn${item.is_ready || forceGreen ? " ready" : ""}`}
+                                                                                            disabled={forceGreen}
+                                                                                            onClick={() => handleToggleReady(o.order_id, item.item_id, !item.is_ready)}>
+                                                                                            {item.is_ready || forceGreen ? "✓ Ready" : "✕ Not Ready"}
+                                                                                        </button>
+                                                                                    );
+                                                                                })() : (
+                                                                                    <span className={`ol-ready-btn${item.is_ready ? " ready" : ""}`} style={{pointerEvents:"none"}}>
+                                                                                        {item.is_ready ? "✓ Ready" : "✕ Not Ready"}
+                                                                                    </span>
+                                                                                )}
                                                                             </td>
                                                                         </tr>
                                                                         );
@@ -393,7 +450,7 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                                                                         <td></td>
                                                                     </tr>
                                                                     <tr className="ol-summary-total">
-                                                                        <td colSpan={8} className="ol-summary-label">Total (incl. GST)</td>
+                                                                        <td colSpan={8} className="ol-summary-total">Total (incl. GST)</td>
                                                                         <td className="td-price ol-summary-val"><strong>{totalWithGst.toFixed(2)}</strong></td>
                                                                         <td></td>
                                                                     </tr>
@@ -413,33 +470,49 @@ function SalesOrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
                 </div>
             )}
 
-            <button className="ol-fab" onClick={onNewOrder} title="Place new order">+</button>
+            {privileges?.create !== false && <button className="ol-fab" onClick={onNewOrder} title="Place new order">+</button>}
         </div>
     );
 }
 
 // ── Wrapper with Sales / Purchase sub-tabs ────────────────────
-function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete })
+function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete, privileges, poCreateTrigger, salesSubTabTrigger })
 {
-    const [subTab, setSubTab] = useState("sales");
+    const hasSales = privileges?.view !== false;
+    const hasPO = privileges?._po?.view !== false;
+    const [subTab, setSubTab] = useState(hasSales ? "sales" : "purchase");
+
+    // Switch to PO tab and open form when triggered from quick actions
+    useEffect(() => {
+        if (poCreateTrigger > 0) setSubTab("purchase");
+    }, [poCreateTrigger]);
+
+    // Switch to Sales tab when triggered
+    useEffect(() => {
+        if (salesSubTabTrigger > 0) setSubTab("sales");
+    }, [salesSubTabTrigger]);
+
     return (
         <div>
-            <div className="ol-subtab-bar">
-                <button className={`ol-subtab-btn${subTab === "sales" ? " active" : ""}`}
-                    onClick={() => setSubTab("sales")}>Sales Orders</button>
-                <button className={`ol-subtab-btn${subTab === "purchase" ? " active" : ""}`}
-                    onClick={() => setSubTab("purchase")}>Purchase Orders</button>
-            </div>
-            {subTab === "sales" ? (
+            {hasSales && hasPO && (
+                <div className="ol-subtab-bar">
+                    <button className={`ol-subtab-btn${subTab === "sales" ? " active" : ""}`}
+                        onClick={() => setSubTab("sales")}>Sales Orders</button>
+                    <button className={`ol-subtab-btn${subTab === "purchase" ? " active" : ""}`}
+                        onClick={() => setSubTab("purchase")}>Purchase Orders</button>
+                </div>
+            )}
+            {subTab === "sales" && hasSales ? (
                 <SalesOrderList
                     onEditOrder={onEditOrder}
                     onNewOrder={onNewOrder}
                     refreshKey={refreshKey}
                     onOrderDelete={onOrderDelete}
+                    privileges={privileges}
                 />
-            ) : (
-                <PurchaseOrder />
-            )}
+            ) : hasPO ? (
+                <PurchaseOrder privileges={privileges._po} createTrigger={poCreateTrigger} />
+            ) : null}
         </div>
     );
 }

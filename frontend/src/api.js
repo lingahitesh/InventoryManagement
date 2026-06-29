@@ -55,6 +55,12 @@ export const checkAvailability = (sku_type, sku_subtype, sku_dim) => {
     return request("GET", `/inventory/available?${q}`);
 };
 
+export const getPriceHistory = (sku_type, sku_subtype, sku_dim, customer_id) => {
+    const q = new URLSearchParams({ sku_type, sku_subtype, sku_dim });
+    if (customer_id) q.set("customer_id", customer_id);
+    return request("GET", `/inventory/price-history?${q}`);
+};
+
 // ── Customers ──────────────────────────────────────────────
 export const getCustomers    = ()         => request("GET",    "/customers");
 export const addCustomer     = (data)     => request("POST",   "/customers", data);
@@ -101,6 +107,9 @@ export const addPayment    = (data)   => request("POST",   "/payments",       da
 export const updatePayment = (id, data) => request("PUT",  `/payments/${id}`, data);
 export const deletePayment = (id)     => request("DELETE", `/payments/${id}`);
 export const getCustomerBalance = (id) => request("GET",   `/payments/balance/${id}`);
+export const getPaymentDues    = ()   => request("GET",   "/payments/dues");
+export const getCustomerDuesDetail = (id) => request("GET", `/payments/dues/${id}`);
+export const getOrderDuesItems = (customerId, orderId) => request("GET", `/payments/dues/${customerId}/order/${orderId}/items`);
 
 export const downloadLedger = (customerId, dateFrom, dateTo) => {
     const q = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
@@ -117,6 +126,11 @@ export const createPurchaseOrder   = (data)  => request("POST", "/purchase-order
 export const deletePurchaseOrder   = (id)    => request("DELETE", `/purchase-orders/${id}`);
 export const getPurchaseOrderItems = (id)    => request("GET", `/purchase-orders/${id}/items`);
 export const togglePOItemArrived   = (poi_id, arrived) => request("POST", `/purchase-orders/items/${poi_id}/arrived`, { arrived });
+export const advancePOItemStatus   = (poi_id, status) => request("POST", `/purchase-orders/items/${poi_id}/status`, { status });
+export const updatePOItem          = (poi_id, data) => request("PUT", `/purchase-orders/items/${poi_id}`, data);
+export const confirmPurchaseOrder  = (id) => request("POST", `/purchase-orders/${id}/confirm`);
+export const unconfirmPurchaseOrder = (id) => request("POST", `/purchase-orders/${id}/unconfirm`);
+export const updatePurchaseOrder   = (id, data) => request("PUT", `/purchase-orders/${id}`, data);
 export const getPOShippingAddresses = ()     => request("GET", "/purchase-orders/shipping-addresses");
 export const getPOBillingAddresses  = ()     => request("GET", "/purchase-orders/billing-addresses");
 export const savePOBillingAddress   = (address) => request("POST", "/purchase-orders/billing-addresses", { address });
@@ -135,3 +149,20 @@ export const generateCustomInvoice = (orderId, params) => {
             return res.blob();
         });
 };
+
+
+// ── Auth & Users ─────────────────────────────────────────────
+export const loginUser          = (email, password) => request("POST", "/auth/login", { email, password });
+export const getUsers           = ()     => request("GET", "/auth/users");
+export const createUser         = (data) => request("POST", "/auth/users", data);
+export const getUserPrivileges  = (id)   => request("GET", `/auth/users/${id}/privileges`);
+export const updateUserPrivileges = (id, privs) => request("PUT", `/auth/users/${id}/privileges`, privs);
+export const changePassword     = (userId, oldPassword, newPassword) => request("POST", "/auth/change-password", { user_id: userId, old_password: oldPassword, new_password: newPassword });
+export const requestPasswordReset = (email) => request("POST", "/auth/reset-request", { email });
+export const verifyResetCode    = (userId, code, newPassword) => request("POST", "/auth/reset-verify", { user_id: userId, code, new_password: newPassword });
+export const deleteUser         = (id)   => request("DELETE", `/auth/users/${id}`);
+export const updateUser         = (id, data) => request("PUT", `/auth/users/${id}`, data);
+
+
+// ── Dashboard ────────────────────────────────────────────────
+export const getDashboardData = () => request("GET", "/orders/dashboard");

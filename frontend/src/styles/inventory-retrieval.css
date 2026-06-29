@@ -1,12 +1,23 @@
 .retrieval-container {
     width: 100%;
-    padding: 10px;
+    padding: 0;
+    animation: revealFadeIn 0.4s ease;
 }
+@keyframes revealFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 .retrieval-container h1 {
-    margin-bottom: 28px;
+    margin: 0;
     font-size: 26px;
+    font-weight: 700;
     color: #1a1a2e;
+    letter-spacing: -0.02em;
+}
+
+.retrieval-subtitle {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #8896a7;
+    font-weight: 400;
 }
 
 .retrieval-form {
@@ -82,11 +93,12 @@
 }
 
 .retrieval-table-wrapper {
-    margin-top: 12px;
+    margin-top: 16px;
     width: 100%;
-    overflow-x: auto;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow-x: visible;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .retrieval-table-wrapper h2 {
@@ -136,17 +148,19 @@
 
 .retrieval-table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
     background: white;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .retrieval-table th,
 .retrieval-table td {
-    padding: 10px 14px;
-    border-bottom: 1px solid #e8e8e8;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f0f0f5;
     text-align: left;
 }
 
@@ -154,11 +168,21 @@
     background: #1a1a2e;
     color: white;
     font-weight: 600;
-    padding: 8px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 10px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.retrieval-table tbody tr {
+    transition: background 0.15s;
 }
 
 .retrieval-table tbody tr:hover {
-    background: #f9f9f9;
+    background: #f8faff;
 }
 
 .retrieval-clear-btn {
@@ -185,19 +209,22 @@
 
 /* ── Cart button per row ── */
 .retrieval-cart-btn {
-    background: #e8f4fd;
-    border: 1px solid #90caf9;
-    border-radius: 5px;
-    padding: 4px 9px;
+    background: white;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 5px 10px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     margin-left: 4px;
-    transition: background 0.15s;
+    transition: all 0.2s;
 }
 
 .retrieval-cart-btn:hover {
-    background: #bbdefb;
+    background: #eff6ff;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
 }
 
 /* ── Cart confirmation overlay ── */
@@ -306,81 +333,106 @@
 .retrieval-edit-btn,
 .retrieval-delete-btn {
     border: none;
-    border-radius: 5px;
-    padding: 4px 9px;
+    border-radius: 6px;
+    padding: 5px 10px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     margin-left: 4px;
-    transition: background 0.15s;
+    transition: all 0.2s;
 }
 
 .retrieval-edit-btn {
-    background: #e3f2fd;
-    color: #1565c0;
+    background: #eff6ff;
+    color: #2563eb;
 }
-.retrieval-edit-btn:hover { background: #bbdefb; }
+.retrieval-edit-btn:hover { background: #dbeafe; transform: translateY(-1px); }
 
 .retrieval-delete-btn {
-    background: #ffebee;
-    color: #c62828;
+    background: #fef2f2;
+    color: #dc2626;
 }
-.retrieval-delete-btn:hover { background: #ffcdd2; }
+.retrieval-delete-btn:hover { background: #fee2e2; transform: translateY(-1px); }
 
 .retrieval-search-button {
-    background: #d5ede7;
+    background: #f0fdf4;
+    color: #16a34a;
 }
 
 .retrieval-search-button:hover {
-    background: #bbdefb;
+    background: #dcfce7;
+    transform: translateY(-1px);
 }
 /* ── Summary / detail rows ── */
 .summary-row {
-    background: #f5f8ff;
+    background: #ffffff;
     font-weight: 600;
+    cursor: default;
 }
 
-.summary-row:hover { background: #eaf0ff; }
+.summary-row:hover { background: #f5f8ff; }
+
+.summary-row td { border-bottom: 1px solid #eef2f7; }
 
 .detail-row {
-    background: #f8faff;
+    background: #f9fafb;
 }
 
 .retrieval-expand-btn {
-    background: transparent;
-    border: 1px solid #c5c5c5;
-    border-radius: 5px;
+    background: white;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
     padding: 5px 12px;
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
     color: #555;
     margin-left: 5px;
-    transition: background 0.15s;
+    transition: all 0.2s;
+    width: 76px;
+    text-align: center;
 }
-.retrieval-expand-btn:hover { background: #ebebeb; }
+.retrieval-expand-btn:hover {
+    background: #f0f4ff;
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
 
 /* ── Inner detail table (nested inside expanded row) ── */
 .detail-inner-table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
     margin: 0;
+    background: white;
+    border-radius: 0 0 10px 10px;
 }
 
 .detail-inner-table th {
-    background: #2d2d5e;
+    background: #1a1a2e;
     color: white;
-    padding: 8px 12px;
+    padding: 9px 12px;
     font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .detail-inner-table td {
     padding: 10px 12px;
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid #f1f5f9;
     color: #333;
     vertical-align: middle;
+}
+
+.detail-inner-table tbody tr {
+    transition: background 0.15s;
+}
+.detail-inner-table tbody tr:hover {
+    background: #f8faff;
 }
 
 .detail-actions {
@@ -442,40 +494,40 @@
 }
 
 .retrieval-table-scroll {
-    overflow-x: auto;
+    overflow-x: visible;
 }
 
 /* ── Floating Action Button ── */
 .retrieval-fab {
     position: fixed;
-    bottom: 36px;
-    right: 36px;
-    width: 56px;
-    height: 56px;
+    bottom: 32px;
+    right: 32px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: #1a1a2e;
     color: white;
     font-size: 28px;
-    font-weight: 400;
-    line-height: 1;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(26, 26, 46, 0.35);
+    display: grid;
+    place-items: center;
+    padding-bottom: 3px;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
     z-index: 200;
+    animation: fabFadeIn 0.5s ease 0.3s both;
 }
+@keyframes fabFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .retrieval-fab:hover {
-    background: #2d2d5e;
-    transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    background: #3b82f6;
+    box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4);
+    transform: rotate(90deg);
 }
 
 .retrieval-fab:active {
-    transform: scale(0.96);
+    background: #2563eb;
 }
 
 /* ── Header row with toolbar ── */
@@ -483,9 +535,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
 }
 
 .retrieval-header-row h1 { margin: 0; }
@@ -498,28 +550,67 @@
 }
 
 .rtb-btn {
-    padding: 7px 14px;
+    padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    border: 2px solid #d0d0d0;
-    background: #f5f5f5;
-    color: #333;
-    transition: background 0.15s, border-color 0.15s;
+    border: 1.5px solid #e0e0e0;
+    background: white;
+    color: #444;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
 }
 
-.rtb-btn:hover:not(:disabled) { background: #e5e5e5; border-color: #aaa; }
+.rtb-btn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #bbb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.rtb-btn:active:not(:disabled) { transform: translateY(0); }
 .rtb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.rtb-adv   { border-color: #1a1a2e; color: #1a1a2e; background: #f0f0f8; }
-.rtb-adv:hover { background: #e0e0f0; }
+.rtb-adv   { border-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
+.rtb-adv:hover { background: #dbeafe; border-color: #2563eb; }
 
-.rtb-close { background: #fff0f0; border-color: #e88; color: #c00; }
-.rtb-close:hover { background: #ffe0e0; }
+.rtb-sort-wrap {
+    position: relative;
+}
 
-.rtb-back  { background: transparent; border-color: #1a1a2e; color: #1a1a2e; }
+.rtb-sort {
+    padding: 8px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: all 0.15s;
+}
+
+.rtb-sort:hover {
+    border-color: #1a1a2e;
+    background-color: #f8f9ff;
+}
+
+.rtb-sort:focus {
+    outline: none;
+    border-color: #4fc3f7;
+    box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.15);
+}
+
+.rtb-close { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+.rtb-close:hover { background: #fee2e2; }
+
+.rtb-back  { background: white; border-color: #1a1a2e; color: #1a1a2e; }
 .rtb-back:hover { background: #1a1a2e; color: white; }
 
 /* ── Advanced search panel ── */
@@ -527,12 +618,18 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 14px 18px;
-    background: #f8f8ff;
-    border: 1px solid #dde;
-    border-radius: 8px;
-    margin-bottom: 14px;
+    padding: 16px 20px;
+    background: white;
+    border: 1px solid #e8ecf0;
+    border-radius: 10px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    animation: advSlideDown 0.6s ease;
+}
+@keyframes advSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .retrieval-adv-panel label {
@@ -692,26 +789,27 @@
 
 /* ── Filter row inside thead ── */
 .filter-row td {
-    background: #f0f0f8;
-    padding: 4px 6px;
-    border-bottom: 2px solid #d0d0d0;
+    background: #f8fafc;
+    padding: 6px 8px;
+    border-bottom: 1px solid #e8ecf0;
 }
 
 .filter-row .col-filter {
     width: 100%;
-    padding: 5px 8px;
+    padding: 7px 10px;
     font-size: 12px;
-    border: 1px solid #c8c8c8;
-    border-radius: 4px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
     background: white;
     color: #333;
     box-sizing: border-box;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
 }
 
 .filter-row .col-filter:focus {
     outline: none;
-    border-color: #4fc3f7;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     background: #fff;
 }
 
@@ -742,7 +840,7 @@
 .retrieval-table td,
 .retrieval-table th {
     vertical-align: middle;
-    overflow: hidden;
+    overflow: visible;
     text-overflow: ellipsis;
 }
 
@@ -777,4 +875,36 @@
 
 .summary-row td.col-actions button {
     margin-right: 4px;
+}
+
+/* ── NEW badge on summary rows ── */
+.summary-new-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 4px;
+    padding: 2px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    margin-right: 8px;
+    vertical-align: middle;
+    animation: newPulse 2s ease-in-out infinite;
+}
+@keyframes newPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.summary-new-badge-subtable {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    animation: newPulse 2s ease-in-out infinite;
 }

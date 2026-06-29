@@ -22,12 +22,12 @@ def create_dispatch(dispatched_through, items):
             cursor.execute("""
                 INSERT INTO dispatch_items
                     (dispatch_item_id, dispatch_id, order_id, order_item_id, units_dispatched,
-                     payment_mode, dispatch_doc_no, delivery_note_date, delivery_date,
+                     dispatch_doc_no, delivery_note_date, delivery_date,
                      buyer_order_no, buyer_order_date, other_references)
                 VALUES
-                    (dispatch_item_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11)
+                    (dispatch_item_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8, :9, :10)
             """, [dispatch_id, item.order_id, item.order_item_id, item.units_dispatched,
-                  item.payment_mode, item.dispatch_doc_no, item.delivery_note_date,
+                  item.dispatch_doc_no, item.delivery_note_date,
                   item.delivery_date, item.buyer_order_no, item.buyer_order_date,
                   item.other_references])
 
@@ -46,14 +46,22 @@ def get_dispatches():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT d.dispatch_id, d.dispatched_through, d.total_units, d.created_at
+        SELECT d.dispatch_id, d.dispatched_through, d.total_units, d.created_at,
+               (SELECT LISTAGG(DISTINCT c.fname || ' ' || NVL(c.mname || ' ', '') || c.lname, ', ')
+                    WITHIN GROUP (ORDER BY c.fname)
+                FROM dispatch_items di
+                JOIN orders o ON o.order_id = di.order_id
+                JOIN customers c ON c.customer_id = o.customer_id
+                WHERE di.dispatch_id = d.dispatch_id) AS customer_names,
+               (SELECT LISTAGG(DISTINCT TO_CHAR(di2.order_id), ', ') WITHIN GROUP (ORDER BY di2.order_id)
+                FROM dispatch_items di2 WHERE di2.dispatch_id = d.dispatch_id) AS order_ids
         FROM dispatches d
         ORDER BY d.dispatch_id DESC
     """)
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    keys = ["dispatch_id", "dispatched_through", "total_units", "created_at"]
+    keys = ["dispatch_id", "dispatched_through", "total_units", "created_at", "customer_names", "order_ids"]
     result = []
     for row in rows:
         d = dict(zip(keys, row))
@@ -73,7 +81,7 @@ def get_dispatch_items(dispatch_id):
                o.customer_id,
                c.fname || ' ' || NVL(c.mname || ' ', '') || c.lname AS customer_name,
                inv.sku_type, inv.sku_subtype, inv.sku_dim,
-               di.payment_mode, di.dispatch_doc_no, di.delivery_note_date,
+               di.dispatch_doc_no, di.delivery_note_date,
                di.delivery_date, di.buyer_order_no, di.buyer_order_date, di.other_references
         FROM dispatch_items di
         JOIN orders o ON o.order_id = di.order_id
@@ -88,7 +96,7 @@ def get_dispatch_items(dispatch_id):
     conn.close()
     keys = ["dispatch_item_id", "order_id", "order_item_id", "units_dispatched",
             "customer_id", "customer_name", "sku_type", "sku_subtype", "sku_dim",
-            "payment_mode", "dispatch_doc_no", "delivery_note_date",
+            "dispatch_doc_no", "delivery_note_date",
             "delivery_date", "buyer_order_no", "buyer_order_date", "other_references"]
     result = []
     for r in rows:

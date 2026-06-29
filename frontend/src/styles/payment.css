@@ -1,51 +1,58 @@
-.payment-container { padding: 10px; }
+/* ═══════════════════════════════════════════════════════
+   Payment Page
+   ═══════════════════════════════════════════════════════ */
+.payment-container { padding: 0; animation: payFadeIn 0.4s ease; }
+@keyframes payFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ── Header ─────────────────────────────────────────── */
 .payment-header-row {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 }
-.payment-header-row h1 { margin: 0; font-size: 26px; color: #1a1a2e; }
-
+.payment-header-row h1 { margin: 0; font-size: 26px; font-weight: 700; color: #1a1a2e; }
 .payment-toolbar { display: flex; gap: 8px; align-items: center; }
 
+/* ── Error ──────────────────────────────────────────── */
 .pay-error {
     background: #fdecea; color: #c0392b; border: 1px solid #e74c3c;
     border-radius: 6px; padding: 10px 16px; margin-bottom: 14px; font-weight: 600;
 }
 
-/* ── Search bar ── */
+/* ── Search Bar ─────────────────────────────────────── */
 .pay-search-bar {
     display: flex; gap: 14px; align-items: flex-end;
     margin-bottom: 18px; flex-wrap: wrap;
 }
 .pay-search-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
-.pay-search-field label { font-size: 12px; font-weight: 600; color: #555; }
-.pay-search-field input { padding: 8px 12px; border: 2px solid #d0d0d0; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
-.pay-search-field input:focus { outline: none; border-color: #4fc3f7; }
+.pay-search-field label { font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
+.pay-search-field input {
+    padding: 8px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+    font-size: 13px; height: 38px; box-sizing: border-box; transition: all 0.2s;
+}
+.pay-search-field input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 
 .pay-placeholder { padding: 40px; text-align: center; color: #999; border: 2px dashed #ddd; border-radius: 8px; }
 
-/* ── Table ── */
-.pay-table-wrapper { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-.pay-table { width: 100%; border-collapse: collapse; font-size: 14px; background: white; border-radius: 10px; overflow: hidden; }
-.pay-table th { background: #1a1a2e; color: white; padding: 11px 14px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
-.pay-table td { padding: 10px 14px; border-bottom: 1px solid #eee; vertical-align: middle; }
-.pay-table th:nth-child(4), .pay-table td:nth-child(4),
-.pay-table th:nth-child(5), .pay-table td:nth-child(5) { text-align: right; }
-.pay-table tbody tr:hover { background: #f8f9fa; }
+/* ── History Table ──────────────────────────────────── */
+.history-table-wrap { overflow-x: auto; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); margin-bottom: 12px; }
+.history-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; background: white; border-radius: 12px; overflow: hidden; table-layout: fixed; }
+.history-table th { background: #1a1a2e; color: white; padding: 11px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+.history-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f5; vertical-align: middle; }
+.history-table tbody tr { transition: background 0.15s; }
+.history-table tbody tr:hover { background: #f8faff; }
+
+/* Right-align helpers */
+.th-right { text-align: right !important; }
+.td-right { text-align: right; }
 
 .pay-credit { color: #2e7d32; font-weight: 700; }
-.pay-debit  { color: #c62828; font-weight: 700; }
+.pay-debit  { color: #c62828; font-weight: 700; text-align: right;}
 .pay-zero   { color: #555; }
-
 .pay-notes { color: #777; font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── Payment form ── */
+/* ── Payment Form ───────────────────────────────────── */
 .payment-form { min-width: 480px; }
-
-.pf-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;
-}
+.pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
 .pf-field { display: flex; flex-direction: column; gap: 5px; }
 .pf-field label { font-size: 12px; font-weight: 600; color: #555; }
 .pf-field input, .pf-field select {
@@ -53,9 +60,7 @@
     font-size: 14px; color: #1a1a2e; background: white; transition: border-color 0.2s;
 }
 .pf-field input:focus, .pf-field select:focus { outline: none; border-color: #4fc3f7; }
-
 .pf-span2 { grid-column: span 2; }
-
 .pf-balance {
     grid-column: span 2;
     display: flex; gap: 24px; flex-wrap: wrap;
@@ -64,12 +69,191 @@
 }
 .pay-due-pos { color: #c62828; font-weight: 700; }
 .pay-due-zero { color: #2e7d32; font-weight: 700; }
+.pf-actions { display: flex; justify-content: flex-end; gap: 12px; padding-top: 12px; border-top: 1px solid #eee; }
 
-.pf-actions {
-    display: flex; justify-content: flex-end; gap: 12px;
-    padding-top: 12px; border-top: 1px solid #eee;
+/* ── Ledger Modal ───────────────────────────────────── */
+.ledger-modal-form { min-width: 700px; }
+
+/* ═══════════════════════════════════════════════════════
+   Payment Dues Section
+   ═══════════════════════════════════════════════════════ */
+.pay-dues-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 2px solid #eee;
+}
+
+.pay-dues-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 16px;
+}
+
+/* ── Dues Summary Table ─────────────────────────────── */
+.dues-table-wrap {
+    overflow-x: visible;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.dues-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    background: white;
+    border-radius: 12px;
+    overflow: visible;
+    table-layout: fixed;
+}
+
+.dues-table th {
+    background: #1a1a2e;
+    color: white;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.dues-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f5;
+    vertical-align: middle;
+}
+
+.dues-table tbody tr { transition: background 0.15s; }
+.dues-table tbody tr:hover { background: #f8faff; }
+.dues-table tbody tr.dues-row-overdue { background: #fff5f5; }
+.dues-table tbody tr.dues-row-overdue:hover { background: #ffebee; }
+
+/* ── Dues Detail Table (nested) ─────────────────────── */
+.dues-detail-wrap {
+    padding: 0px !important;
+    background: #f8f9fa;
+}
+
+.dues-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: white;
+    overflow: visible;
+}
+
+.dues-detail-table th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: #2d2d5e;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.dues-detail-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 12px;
+}
+
+.dues-detail-table tr.dues-row-overdue { background: #fff5f5; }
+
+/* ── Info Button (for order breakdown tooltip) ──────── */
+.dues-info-btn {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.dues-info-btn:hover {
+    background: #e3f2fd;
+    border-color: #90caf9;
+}
+
+/* ── Order Breakdown Tooltip ────────────────────────── */
+.dues-tooltip-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-top: 6px;
+}
+
+.dues-tooltip-table th {
+    padding: 3px 6px;
+    text-align: left;
+    color: #90caf9;
+    font-size: 9px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+}
+
+.dues-tooltip-table td {
+    padding: 3px 6px;
+    color: #ddd;
+    border-bottom: 1px solid #2a2a3e;
+}
+
+.dues-tooltip-table tbody tr:hover {
+    background: #2a2a4e;
 }
 
 
-/* ── Ledger modal ── */
-.ledger-modal-form { min-width: 420px; }
+/* ── Disabled action buttons (same-day only) ──────── */
+.history-table .ol-edit-btn:disabled,
+.history-table .ol-delete-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+
+
+/* ── Payment Form Dues Breakdown ──────────────────────── */
+.pf-dues-breakdown {
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.pf-dues-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.pf-dues-table th {
+    padding: 8px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #666;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.pf-dues-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.pf-dues-total-row {
+    background: #f8f9ff;
+}
+
+.pf-dues-total-row td {
+    border-bottom: none;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}

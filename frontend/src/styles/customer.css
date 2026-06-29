@@ -1,13 +1,16 @@
 .customer-container {
-    padding: 10px;
+    padding: 0;
     max-width: 100%;
     overflow-x: hidden;
+    animation: revealFadeIn 0.4s ease;
 }
 
 .customer-container h1 {
-    margin: 16px 0;
+    margin: 0;
     font-size: 26px;
+    font-weight: 700;
     color: #1a1a2e;
+    letter-spacing: -0.02em;
 }
 
 .success-msg {
@@ -41,12 +44,17 @@
 }
 
 .customer-form {
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e8ecf0;
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 24px;
     background: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    animation: advSlideDown 0.25s ease;
+}
+@keyframes advSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .customer-form h3 {
@@ -183,10 +191,12 @@
 
 .customer-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     background: white;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .customer-table th,
@@ -194,20 +204,24 @@
     padding: 12px 14px;
     text-align: left;
     font-size: 13px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #f0f0f5;
 }
 
 .customer-table th {
     background: #1a1a2e;
     color: white;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
+}
+
+.customer-table tbody tr {
+    transition: background 0.15s;
 }
 
 .customer-table tbody tr:hover {
-    background: #f8f9fa;
+    background: #f8faff;
 }
 
 .customer-table tbody tr.row-editing {
@@ -261,13 +275,13 @@
 .edit-btn,
 .delete-btn {
     border: none;
-    border-radius: 5px;
-    padding: 4px 9px;
+    border-radius: 6px;
+    padding: 5px 10px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     margin-left: 4px;
-    transition: background 0.15s;
+    transition: all 0.2s;
 }
 .save-btn,
 .cancel-btn {
@@ -282,21 +296,23 @@
 }
 
 .edit-btn {
-    background: #e3f2fd;
-    color: #1565c0;
+    background: #eff6ff;
+    color: #2563eb;
 }
 
 .edit-btn:hover {
-    background:#bbdefb;;
+    background: #dbeafe;
+    transform: translateY(-1px);
 }
 
 .delete-btn {
-    background: #ffebee;
-    color: #c62828;
+    background: #fef2f2;
+    color: #dc2626;
 }
 
 .delete-btn:hover {
-    background: #ffcdd2;
+    background: #fee2e2;
+    transform: translateY(-1px);
 }
 
 .save-btn {
@@ -399,64 +415,71 @@
 /* ── Floating Action Button ── */
 .customer-fab {
     position: fixed;
-    bottom: 36px;
-    right: 36px;
-    width: 56px;
-    height: 56px;
+    bottom: 32px;
+    right: 32px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: #1a1a2e;
     color: white;
     font-size: 28px;
-    font-weight: 400;
-    line-height: 1;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, transform 0.15s;
+    box-shadow: 0 4px 20px rgba(26, 26, 46, 0.35);
+    display: grid;
+    place-items: center;
+    padding-bottom: 3px;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
     z-index: 200;
+    animation: fabFadeIn 0.5s ease 0.3s both;
 }
-.customer-fab:hover { background: #2d2d5e; transform: scale(1.08); }
-.customer-fab:active { transform: scale(0.96); }
+@keyframes fabFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.customer-fab:hover { background: #3b82f6; box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4); transform: rotate(90deg); }
+.customer-fab:active { background: #2563eb; }
 
 /* ── Toolbar ── */
 .customer-toolbar {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .cust-refresh-btn, .cust-clear-btn {
-    padding: 7px 14px;
+    padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    border: 2px solid #d0d0d0;
-    background: #f5f5f5;
-    color: #333;
-    transition: background 0.15s;
+    border: 1.5px solid #e0e0e0;
+    background: white;
+    color: #444;
+    transition: all 0.2s;
 }
-.cust-refresh-btn:hover, .cust-clear-btn:hover { background: #e0e0e0; }
+.cust-refresh-btn:hover, .cust-clear-btn:hover {
+    background: #f8fafc;
+    border-color: #bbb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
 
 /* ── Filter row under column headers ── */
 .cust-filter-row .col-filter
 {
     width: 100%;
-    padding: 5px 8px;
+    padding: 7px 10px;
     font-size: 12px;
-    border: 1px solid #c8c8c8;
-    border-radius: 4px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
     background: white;
     box-sizing: border-box;
+    transition: all 0.2s;
 }
 
 .cust-filter-row .col-filter:focus
 {
     outline: none;
-    border-color: #4fc3f7;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .cust-filter-row td {

@@ -16,8 +16,11 @@ const freshForm = () => ({
     skuDesc:     "",
     trackingId:  "",
     entryDate:   "",   // YYYY-MM-DD
-    entryTime:   ""    // HH:MM
+    entryTime:   "",   // HH:MM
+    location:    "M-Gram"
 });
+
+const LOCATION_OPTIONS = ["M-Gram", "Print", "Film", "Cutting", "Gdwn A", "Gdwn B", "Gdwn C", "Gdwn D"];
 
 function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess, editRecord, clearEditRecord, viewOnly = false })
 {
@@ -63,7 +66,8 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
                 skuDesc:     editRecord.sku_desc      || "",
                 trackingId:  editRecord.tracking_id   || "",
                 entryDate:   datePart,
-                entryTime:   timePart
+                entryTime:   timePart,
+                location:    editRecord.location      || "M-Gram"
             });
             setFieldErrors({});
             setSubmitError("");
@@ -157,7 +161,8 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
             sku_desc:       formData.skuDesc || null,
             sku_units:      parseInt(formData.skuUnits, 10),
             tracking_id:    formData.trackingId || null,
-            entry_date:     entryDatetime
+            entry_date:     entryDatetime,
+            location:       formData.location || "M-Gram"
         };
         try {
             if (isEditMode)
@@ -300,6 +305,16 @@ function InventoryFeeding({ closeCurrentTab, registerCloseGuard, onSubmitSuccess
                     <div className="feed-field">
                         <label>Entry Time : <span className="optional">(optional, 00:00 if date set)</span></label>
                         <input type="time" name="entryTime" value={formData.entryTime} onChange={handleChange} />
+                    </div>
+                </div>
+
+                {/* Row 4b: Location */}
+                <div className="feed-row feed-row-three">
+                    <div className="feed-field">
+                        <label>Location :</label>
+                        <select name="location" value={formData.location} onChange={handleChange}>
+                            {LOCATION_OPTIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                        </select>
                     </div>
                 </div>
 

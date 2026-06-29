@@ -18,4 +18,5 @@ class OrderCreate(BaseModel):
     total_qty:        float
     total_amount:     float
     delivery_charge:  float = 0.0
+    terms_of_payment: int = 30
     lines:            list[CartLine]

@@ -4,7 +4,7 @@ from backend.services.inventory_service import deduct_sku_quantity
 
 
 def allocate_and_place_order(customer_id, order_date, shipping_address,
-                              total_units, total_qty, total_amount, delivery_charge, lines):
+                              total_units, total_qty, total_amount, delivery_charge, terms_of_payment, lines):
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -12,12 +12,12 @@ def allocate_and_place_order(customer_id, order_date, shipping_address,
         cursor.execute("""
             INSERT INTO orders
                 (order_id, customer_id, order_date, shipping_address,
-                 total_units, total_qty, total_amount, delivery_charge)
+                 total_units, total_qty, total_amount, delivery_charge, terms_of_payment)
             VALUES
-                (order_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7)
-            RETURNING order_id INTO :8
+                (order_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8)
+            RETURNING order_id INTO :9
         """, [customer_id, order_date, shipping_address,
-              total_units, total_qty, total_amount, delivery_charge, order_id_var])
+              total_units, total_qty, total_amount, delivery_charge, terms_of_payment, order_id_var])
         order_id = order_id_var.getvalue()[0]
 
         # Process each cart line independently

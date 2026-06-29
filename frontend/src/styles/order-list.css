@@ -1,20 +1,24 @@
 .order-list-container {
-    padding: 10px 10px;
+    padding: 0;
     position: relative;
+    animation: revealFadeIn 0.4s ease;
 }
+@keyframes revealFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 .order-list-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
     width: 100%;
 }
 
 .order-list-header h1 {
     font-size: 26px;
+    font-weight: 700;
     color: #1a1a2e;
     margin: 0;
+    letter-spacing: -0.02em;
 }
 
 .order-list-toolbar {
@@ -24,18 +28,23 @@
 }
 
 .ol-refresh-btn, .ol-clear-btn {
-    padding: 7px 14px;
+    padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
-    border: 2px solid #d0d0d0;
-    background: #f5f5f5;
-    color: #333;
-    transition: background 0.15s, border-color 0.15s;
+    border: 1.5px solid #e0e0e0;
+    background: white;
+    color: #444;
+    transition: all 0.2s;
     white-space: nowrap;
 }
-.ol-refresh-btn:hover:not(:disabled), .ol-clear-btn:hover { background: #e5e5e5; border-color: #aaa; }
+.ol-refresh-btn:hover:not(:disabled), .ol-clear-btn:hover {
+    background: #f8fafc;
+    border-color: #bbb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
 .ol-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .ol-error {
@@ -62,23 +71,28 @@
     flex-direction: column;
     gap: 4px;
     flex: 1;
+    min-width: 140px;
 }
 
 .ol-search-field label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    color: #555;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .ol-search-field input {
     padding: 8px 12px;
-    border: 2px solid #d0d0d0;
-    border-radius: 6px;
-    font-size: 14px;
-    min-width: 180px;
-    transition: border-color 0.2s;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+    min-width: 140px;
+    height: 38px;
+    box-sizing: border-box;
+    transition: all 0.2s;
 }
-.ol-search-field input:focus { outline: none; border-color: #4fc3f7; }
+.ol-search-field input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 
 .ol-placeholder {
     padding: 40px;
@@ -92,16 +106,17 @@
 /* ── Table ── */
 .ol-table-scroll {
     overflow-x: auto;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .ol-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 12px;
     background: white;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
 }
 
@@ -113,7 +128,7 @@
     padding: 11px 14px;
     text-align: left;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     white-space: nowrap;
@@ -121,12 +136,13 @@
 
 .ol-table td {
     padding: 10px 14px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #f0f0f5;
     color: #1a1a2e;
     vertical-align: middle;
 }
 
-.ol-table tbody tr:hover { background: #f8f9fa; }
+.ol-table tbody tr { transition: background 0.15s; }
+.ol-table tbody tr:hover { background: #f8faff; }
 .ol-editing-row { background: #fffbf0 !important; }
 
 /* ── Edit inputs inside table ── */
@@ -149,27 +165,28 @@
 /* ── Action buttons ── */
 .ol-edit-btn, .ol-save-btn, .ol-cancel-btn {
     border: none;
-    border-radius: 5px;
-    padding: 4px 9px;
+    border-radius: 6px;
+    padding: 5px 10px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: 400;
+    font-size: 13px;
+    font-weight: 500;
     margin-left: 4px;
-    transition: background 0.15s;
+    transition: all 0.2s;
 }
 
-.ol-edit-btn   { background: #e3f2fd; color: #1565c0; }
-.ol-edit-btn:hover   { background: #bbdefb; }
+.ol-edit-btn   { background: #eff6ff; color: #2563eb; }
+.ol-edit-btn:hover:not(:disabled)   { background: #dbeafe; transform: translateY(-1px); }
+.ol-edit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.ol-save-btn   { background: #e8f5e9; color: #2e7d32; }
-.ol-save-btn:hover   { background: #c8e6c9; }
+.ol-save-btn   { background: #f0fdf4; color: #16a34a; }
+.ol-save-btn:hover   { background: #dcfce7; transform: translateY(-1px); }
 
-.ol-cancel-btn { background: #ffebee; color: #c62828; }
-.ol-cancel-btn:hover { background: #ffcdd2; }
+.ol-cancel-btn { background: #fef2f2; color: #dc2626; }
+.ol-cancel-btn:hover { background: #fee2e2; transform: translateY(-1px); }
 
 /* ── Details button ── */
 .ol-details-btn {
-    padding: 5px 10px;
+    padding: 5px 0;
     font-size: 12px;
     font-weight: 600;
     border-radius: 5px;
@@ -179,6 +196,10 @@
     color: #333;
     margin-left: 4px;
     transition: background 0.15s;
+    width: 76px;
+    text-align: center;
+    display: inline-block;
+    box-sizing: border-box;
 }
 .ol-details-btn:hover { background: #e5e5e5; }
 
@@ -226,27 +247,27 @@
 /* ── Floating Action Button ── */
 .ol-fab {
     position: fixed;
-    bottom: 36px;
-    right: 36px;
-    width: 56px;
-    height: 56px;
+    bottom: 32px;
+    right: 32px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: #1a1a2e;
     color: white;
     font-size: 28px;
-    font-weight: 400;
-    line-height: 1;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.28);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, transform 0.15s;
+    box-shadow: 0 4px 20px rgba(26, 26, 46, 0.35);
+    display: grid;
+    place-items: center;
+    padding-bottom: 3px;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
     z-index: 200;
+    animation: fabFadeIn 0.5s ease 0.3s both;
 }
-.ol-fab:hover { background: #2d2d5e; transform: scale(1.08); }
-.ol-fab:active { transform: scale(0.96); }
+@keyframes fabFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.ol-fab:hover { background: #3b82f6; box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4); transform: rotate(90deg); }
+.ol-fab:active { background: #2563eb; }
 
 .ol-delete-btn {
     padding: 5px 12px;
@@ -321,7 +342,8 @@
 .ol-status {
     padding: 3px 8px;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 10px;
+    white-space: nowrap;
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -336,7 +358,17 @@
     color: #0c5460;
 }
 
+.ol-status--inprocess {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
 .ol-status--completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ol-status--dispatched {
     background: #d4edda;
     color: #155724;
 }
@@ -355,24 +387,26 @@
 .ol-summary-label {
     text-align: right;
     color: #555;
-    font-weight: 600;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    font-weight: 400;
+    font-size: 11px;
 }
 
 .ol-summary-val {
-    font-weight: 600;
-    min-width: 100px;
+    font-weight: 400;
+    font-size: 11px;
+    min-width: 130px;
 }
 
 .ol-summary-total {
     border-top: 2px solid #1a1a2e;
+    text-align: right;
+    font-weight: 700;
     background: #eef0ff;
 }
 
 .ol-summary-total td {
     padding: 8px 14px;
+    font-weight: 700;
     font-size: 13px;
 }
 
@@ -382,7 +416,7 @@
     display: flex;
     gap: 0;
     border-bottom: 2px solid #1a1a2e;
-    margin-bottom: 0;
+    margin-bottom: 20px;
 }
 
 .ol-subtab-btn {
@@ -413,7 +447,7 @@
 
 
 /* ── Ready for dispatch ── */
-.ol-row-ready { background: #e8f5e9 !important; }
+.ol-row-ready { background: #cbedc6 !important; }
 .ol-row-ready:hover { background: #c8e6c9 !important; }
 
 .ol-item-ready { background: #f1f8e9 !important; }
@@ -444,6 +478,18 @@
 }
 
 .ol-ready-btn.ready:hover { background: #c8e6c9; }
+
+.ol-ready-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+.ol-ready-btn.ready:disabled {
+    opacity: 1;
+    cursor:not-allowed;
+    border-color: #2e7d32;
+    background: #c8e6c9;
+    color: #2e7d32;
+}
 
 
 /* ── Items sub-table column sizing ── */
@@ -481,6 +527,16 @@
 .pi-items-table th { background: #f0f0f5; padding: 6px 10px; text-align: left; font-weight: 600; }
 .pi-items-table td { padding: 6px 10px; border-bottom: 1px solid #eee; }
 .pi-items-table input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+
+.pi-delivery-check {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.pi-delivery-check input { margin-right: 6px; width: 15px; height: 15px; cursor: pointer; vertical-align: middle; }
 
 .pi-preview { border-top: 1px solid #eee; padding-top: 12px; }
 

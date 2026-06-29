@@ -8,13 +8,14 @@
     justify-content: center;
     padding: 40px 20px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .modal-overlay-content {
     background: white;
     border-radius: 14px;
     width: 100%;
-    max-width: 900px;
+    max-width: 1100px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
     animation: modal-slide-in 0.2s ease-out;
 }
@@ -22,6 +23,25 @@
 @keyframes modal-slide-in {
     from { opacity: 0; transform: translateY(-20px); }
     to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade-out when closing */
+.modal-overlay-backdrop.closing {
+    animation: modal-fade-out 0.2s ease-in forwards;
+}
+
+.modal-overlay-backdrop.closing .modal-overlay-content {
+    animation: modal-slide-out 0.2s ease-in forwards;
+}
+
+@keyframes modal-fade-out {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+}
+
+@keyframes modal-slide-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-20px); }
 }
 
 .modal-overlay-header {
@@ -63,4 +83,5 @@
     padding: 24px;
     max-height: calc(100vh - 160px);
     overflow-y: auto;
+    overscroll-behavior: contain;
 }

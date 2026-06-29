@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback, Fragment, useLayoutEffect } from "react";
 import "../styles/dispatch.css";
 import { getDispatches, createDispatch, deleteDispatch, getDispatchItems, getOrderItemsForDispatch, getOrders } from "../api";
 import ModalOverlay from "../components/ModalOverlay";
@@ -41,7 +41,6 @@ function DispatchForm({ onClose, onSuccess })
                 order_id: orderId,
                 customer_name: order?.customer_name || "",
                 // Per-order metadata
-                payment_mode: "",
                 dispatch_doc_no: "",
                 delivery_note_date: "",
                 delivery_date: "",
@@ -92,12 +91,6 @@ function DispatchForm({ onClose, onSuccess })
             setError("Dispatched Through must be 'Self Pick Up' or a valid Indian vehicle number plate"); return;
         }
         if (totalQty <= 0) { setError("Select at least one item to dispatch"); return; }
-        // Validate per-order payment_mode
-        for (const o of selectedOrders) {
-            if (o.items.some(i => i.selected && i.units_to_dispatch > 0) && !o.payment_mode.trim()) {
-                setError(`Payment mode required for order ${formatOrderRef(o.order_id)}`); return;
-            }
-        }
         setError("");
         setSubmitConfirm(true);
     };
@@ -112,7 +105,6 @@ function DispatchForm({ onClose, onSuccess })
                     order_id: o.order_id,
                     order_item_id: i.item_id,
                     units_dispatched: i.units_to_dispatch,
-                    payment_mode: o.payment_mode || null,
                     dispatch_doc_no: o.dispatch_doc_no || null,
                     delivery_note_date: o.delivery_note_date || null,
                     delivery_date: o.delivery_date || null,
@@ -144,8 +136,13 @@ function DispatchForm({ onClose, onSuccess })
             <div className="dispatch-field-row">
                 <div className="dispatch-field">
                     <label>Dispatched Through :</label>
-                    <input value={dispThrough} onChange={e => setDispThrough(e.target.value)}
-                        placeholder="Self Pick Up / Vehicle No." />
+                    <div className="dispatch-through-wrap">
+                        <input value={dispThrough} onChange={e => setDispThrough(e.target.value)}
+                            placeholder="Vehicle No." list="dispatch-through-options" />
+                        <datalist id="dispatch-through-options">
+                            <option value="Self Pick Up" />
+                        </datalist>
+                    </div>
                 </div>
             </div>
 
@@ -174,10 +171,6 @@ function DispatchForm({ onClose, onSuccess })
 
                     <div className="dispatch-meta-grid">
                         <div className="dm-field">
-                            <label>Payment Mode *</label>
-                            <input value={o.payment_mode} onChange={e => updateOrderMeta(o.order_id, "payment_mode", e.target.value)} placeholder="e.g. 15 Days" />
-                        </div>
-                        <div className="dm-field">
                             <label>Dispatch Doc No.</label>
                             <input value={o.dispatch_doc_no} onChange={e => updateOrderMeta(o.order_id, "dispatch_doc_no", e.target.value)} />
                         </div>
@@ -197,7 +190,7 @@ function DispatchForm({ onClose, onSuccess })
                             <label>Buyer's Order Date</label>
                             <input type="date" value={o.buyer_order_date} onChange={e => updateOrderMeta(o.order_id, "buyer_order_date", e.target.value)} />
                         </div>
-                        <div className="dm-field dm-field-wide">
+                        <div className="dm-field">
                             <label>Other References</label>
                             <input value={o.other_references} onChange={e => updateOrderMeta(o.order_id, "other_references", e.target.value)} />
                         </div>
@@ -253,13 +246,12 @@ function DispatchDetailGroup({ group })
             <tr>
                 <td>{formatOrderRef(group.order_id)}</td>
                 <td>{group.customer_name}</td>
-                <td>{group.payment_mode || "—"}</td>
                 <td>{totalUnits}</td>
                 <td><button className="ol-details-btn" onClick={() => setOpen(!open)}>{open ? "▲ Hide" : "▼ Details"}</button></td>
             </tr>
             {open && (
                 <tr className="dispatch-tree-row">
-                    <td colSpan={5} style={{ padding: 0 }}>
+                    <td colSpan={4} style={{ padding: 0 }}>
                         <div className="dispatch-tree-wrap">
                             <div className="dispatch-tree-line">
                                 {group.items.map((_, idx) => (
@@ -290,13 +282,20 @@ function DispatchDetailGroup({ group })
 }
 
 
-function Dispatch({ onDispatchSuccess })
+function Dispatch({ onDispatchSuccess, privileges, createTrigger })
 {
     const [dispatches, setDispatches] = useState([]);
     const [loading, setLoading]       = useState(true);
     const [error, setError]           = useState("");
     const [expanded, setExpanded]     = useState({});
     const [showForm, setShowForm]     = useState(false);
+
+    // Search state
+    const [srchThrough,  setSrchThrough]  = useState("");
+    const [srchCustomer, setSrchCustomer] = useState("");
+    const [srchOrderId,  setSrchOrderId]  = useState("");
+    const [srchDateFrom, setSrchDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toLocaleDateString("en-CA"); });
+    const [srchDateTo,   setSrchDateTo]   = useState(() => new Date().toLocaleDateString("en-CA"));
 
     const fetchDispatches = useCallback(async () => {
         setLoading(true); setError("");
@@ -306,6 +305,11 @@ function Dispatch({ onDispatchSuccess })
     }, []);
 
     useEffect(() => { fetchDispatches(); }, [fetchDispatches]);
+
+    // Open form when triggered from quick actions
+    useLayoutEffect(() => {
+        if (createTrigger > 0) setShowForm(true);
+    }, [createTrigger]);
 
     const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -337,6 +341,7 @@ function Dispatch({ onDispatchSuccess })
                 <h1>Dispatch</h1>
                 <div className="dispatch-toolbar">
                     <button className="rtb-btn" onClick={() => { setExpanded({}); fetchDispatches(); }} disabled={loading}>↻</button>
+                    <button className="rtb-btn" onClick={() => { setSrchThrough(""); setSrchCustomer(""); setSrchOrderId(""); setSrchDateFrom(""); setSrchDateTo(""); }}>✕ Clear</button>
                 </div>
             </div>
 
@@ -359,6 +364,25 @@ function Dispatch({ onDispatchSuccess })
                 </ModalOverlay>
             )}
 
+            {/* Search bar */}
+            <div className="ol-search-bar" style={{ marginBottom: 14 }}>
+                <div className="ol-search-field"><label>Customer</label>
+                    <input value={srchCustomer} onChange={e => setSrchCustomer(e.target.value)} placeholder="Name…" />
+                </div>
+                <div className="ol-search-field"><label>Order ID</label>
+                    <input value={srchOrderId} onChange={e => setSrchOrderId(e.target.value)} placeholder="ID…" />
+                </div>
+                <div className="ol-search-field"><label>Dispatched Through</label>
+                    <input value={srchThrough} onChange={e => setSrchThrough(e.target.value)} placeholder="Vehicle / Self…" />
+                </div>
+                <div className="ol-search-field"><label>Date From</label>
+                    <input type="date" value={srchDateFrom} onChange={e => setSrchDateFrom(e.target.value)} />
+                </div>
+                <div className="ol-search-field"><label>Date To</label>
+                    <input type="date" value={srchDateTo} onChange={e => setSrchDateTo(e.target.value)} />
+                </div>
+            </div>
+
             {loading && <div className="dispatch-placeholder">Loading…</div>}
             {!loading && dispatches.length === 0 && <div className="dispatch-placeholder">No dispatches yet.</div>}
 
@@ -372,7 +396,14 @@ function Dispatch({ onDispatchSuccess })
                         </tr>
                     </thead>
                     <tbody>
-                        {dispatches.map(d =>
+                        {dispatches.filter(d => {
+                            const tm = !srchThrough.trim() || (d.dispatched_through || "").toLowerCase().includes(srchThrough.toLowerCase());
+                            const cm = !srchCustomer.trim() || (d.customer_names || "").toLowerCase().includes(srchCustomer.toLowerCase());
+                            const om = !srchOrderId.trim() || (d.order_ids || "").includes(srchOrderId.trim());
+                            const df = !srchDateFrom || (d.created_at || "").slice(0,10) >= srchDateFrom;
+                            const dt = !srchDateTo   || (d.created_at || "").slice(0,10) <= srchDateTo;
+                            return tm && cm && om && df && dt;
+                        }).map(d =>
                         {
                             const exp = expanded[d.dispatch_id];
                             const isOpen = exp?.open ?? false;
@@ -384,7 +415,7 @@ function Dispatch({ onDispatchSuccess })
                                         <td>{d.total_units}</td>
                                         <td>{d.created_at ? d.created_at.slice(0, 10) : "—"}</td>
                                         <td>
-                                            <button className="ol-delete-btn" onClick={() => handleDeleteDispatch(d.dispatch_id)}>🗑</button>
+                                            {privileges?.delete !== false && <button className="ol-delete-btn" onClick={() => handleDeleteDispatch(d.dispatch_id)}>🗑</button>}
                                             <button className="ol-details-btn" onClick={() => toggleExpand(d.dispatch_id)}>
                                                 {isOpen ? "▲ Hide" : "▼ Details"}
                                             </button>
@@ -397,12 +428,12 @@ function Dispatch({ onDispatchSuccess })
                                                 const groups = {};
                                                 exp.items.forEach(item => {
                                                     const key = item.order_id;
-                                                    if (!groups[key]) groups[key] = { order_id: item.order_id, customer_name: item.customer_name, payment_mode: item.payment_mode, items: [] };
+                                                    if (!groups[key]) groups[key] = { order_id: item.order_id, customer_name: item.customer_name, items: [] };
                                                     groups[key].items.push(item);
                                                 });
                                                 return (
                                                 <table className="dispatch-items-table">
-                                                    <thead><tr><th>Order</th><th>Customer</th><th>Payment</th><th>Units</th><th></th></tr></thead>
+                                                    <thead><tr><th>Order</th><th>Customer</th><th>Units</th><th></th></tr></thead>
                                                     <tbody>
                                                         {Object.values(groups).map(g => (
                                                             <DispatchDetailGroup key={g.order_id} group={g} />
@@ -421,7 +452,7 @@ function Dispatch({ onDispatchSuccess })
                 </div>
             )}
 
-            <button className="retrieval-fab" onClick={() => setShowForm(true)} title="New Dispatch">+</button>
+            {privileges?.create !== false && <button className="retrieval-fab" onClick={() => setShowForm(true)} title="New Dispatch">+</button>}
         </div>
     );
 }

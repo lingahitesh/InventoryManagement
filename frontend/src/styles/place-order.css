@@ -29,9 +29,14 @@
 
 .customer-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: 120px 1fr 120px 1fr;
     gap: 14px;
     align-items: center;
+    overflow: hidden;
+}
+
+.customer-grid > * {
+    min-width: 0;
 }
 
 .customer-grid label {
@@ -75,6 +80,61 @@
 .customer-grid select {
     background: white;
     cursor: pointer;
+}
+
+/* ── Multi-value chip boxes for contact/email ── */
+.multi-value-boxes {
+    display: flex;
+    gap: 0;
+    align-items: left;
+    min-height: 38px;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.multi-value-boxes::-webkit-scrollbar {
+    display: none;
+}
+.value-chip {
+    display: inline-flex;
+    align-items: left;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1.5px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1a1a2e;
+    background: #f9f9ff;
+    white-space: nowrap;
+    flex: 1 0 auto;
+    text-align: center;
+}
+.value-chip + .value-chip {
+    margin-left: -1.5px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.value-chip:not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.value-chip.empty {
+    justify-content: left;
+    color: #999;
+    border-color: #e0e0e0;
+    background: #fafafa;
+}
+
+/* ── Truncate long text in grid inputs/selects ── */
+.customer-grid input[readonly],
+.customer-grid select {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .cart-button-row {
@@ -449,7 +509,7 @@
 .avail-panel {
     margin: 14px 0 8px;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid #e0e0e0;
 }
 
@@ -508,6 +568,16 @@
     background: #fafafa;
 }
 
+.avail-avg-cost {
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: #f8f9ff;
+    border: 1px solid #e0e0f0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #333;
+}
+
 /* ── Product panel header with refresh button ── */
 .product-panel-header {
     display: flex;
@@ -554,8 +624,8 @@
 }
 
 .stepper-btn {
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 24px;
     border: none;
     background: #f0f0f0;
     font-size: 18px;
@@ -645,4 +715,82 @@
     letter-spacing: 0.4px;
     margin-top: 15px;
     margin-bottom: 2px;
+}
+
+/* ── Per-row selling price input ── */
+.row-price-input {
+    width: 90px;
+    padding: 6px 8px;
+    border: 1.5px solid #d0d0d0;
+    border-radius: 5px;
+    font-size: 13px;
+    text-align: right;
+}
+.row-price-input:focus { outline: none; border-color: #4fc3f7; }
+
+/* ── Price Info Button & Tooltip ── */
+.price-info-wrap {
+    position: relative;
+    display: inline-block;
+    overflow: visible;
+}
+.price-info-btn {
+    width: 19px; height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: #56a4f5;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.price-info-btn:hover { background: #bbdefb; }
+
+.price-info-tooltip {
+    position: absolute;
+    margin-bottom: 5px;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    min-width: 200px;
+    margin-top: 6px;
+}
+.price-info-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: var(--arrow-left, 50%);
+    transform: translateX(-50%) rotate(180deg);
+    border: 6px solid transparent;
+    border-bottom-color: #1a1a2e;
+}
+.pit-section {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #333;
+}
+.pit-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+.pit-section strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #90caf9;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }

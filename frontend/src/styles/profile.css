@@ -1,0 +1,627 @@
+/* ═══════════════════════════════════════════════════════
+   Profile Page
+   ═══════════════════════════════════════════════════════ */
+.profile-page {
+    padding: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.profile-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: transparent;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: all 0.15s;
+}
+
+.profile-back-btn:hover {
+    border-color: #1a1a2e;
+    color: #1a1a2e;
+    background: #f8f9ff;
+}
+
+/* ── User Info Card ─────────────────────────────────── */
+.profile-card {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: white;
+    border-radius: 14px;
+    padding: 28px 32px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    margin-bottom: 32px;
+}
+
+.profile-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a1a2e, #0f3460);
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-info h2 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    color: #1a1a2e;
+}
+
+.profile-detail {
+    margin: 4px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-root {
+    background: #ede7f6;
+    color: #5e35b1;
+}
+
+.role-admin {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.role-normal {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.profile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-change-pwd {
+    padding: 10px 18px;
+    border: 2px solid #1a1a2e;
+    background: transparent;
+    color: #1a1a2e;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-change-pwd:hover {
+    background: #1a1a2e;
+    color: white;
+}
+
+.btn-logout {
+    padding: 10px 18px;
+    border: 2px solid #c62828;
+    background: transparent;
+    color: #c62828;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-logout:hover {
+    background: #c62828;
+    color: white;
+}
+
+/* ── User Management ────────────────────────────────── */
+.user-management {
+    background: white;
+    border-radius: 14px;
+    padding: 24px 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.um-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.um-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #1a1a2e;
+}
+
+.btn-create-user {
+    padding: 10px 18px;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-create-user:hover {
+    background: #16213e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 26, 46, 0.3);
+}
+
+.um-loading, .um-error {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.um-error {
+    color: #c62828;
+}
+
+.users-table-wrap {
+    overflow-x: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.users-table th {
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 2px solid #f0f0f0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.users-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f5f5f5;
+    color: #333;
+}
+
+.users-table tr.current-row {
+    background: #f8f9ff;
+}
+
+.action-cell {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-privs {
+    padding: 6px 12px;
+    border: 1px solid #1565c0;
+    background: transparent;
+    color: #1565c0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-privs:hover {
+    background: #1565c0;
+    color: white;
+}
+
+.btn-del {
+    padding: 6px 12px;
+    border: 1px solid #c62828;
+    background: transparent;
+    color: #c62828;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-del:hover {
+    background: #c62828;
+    color: white;
+}
+
+/* ── Change Password Form ───────────────────────────── */
+.cpw-form {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.cpw-field {
+    margin-bottom: 16px;
+}
+
+.cpw-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.cpw-field input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.cpw-field input:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+.cpw-error {
+    color: #c62828;
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.cpw-success {
+    color: #2e7d32;
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.cpw-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ── Create User Form ───────────────────────────────── */
+.cu-form {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.cu-error {
+    color: #c62828;
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.cu-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.cu-field {
+    flex: 1;
+    margin-bottom: 12px;
+}
+
+.cu-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.cu-field input,
+.cu-field select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.cu-field input:focus,
+.cu-field select:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+.cu-field input:disabled {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.cu-privileges {
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.cu-privileges h4 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #1a1a2e;
+}
+
+.cu-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ── Privileges Grid (shared) ───────────────────────── */
+.privs-grid {
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.privs-header {
+    display: grid;
+    grid-template-columns: 160px repeat(6, 1fr) 50px;
+    background: #f8f9fa;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.privs-row {
+    display: grid;
+    grid-template-columns: 160px repeat(6, 1fr) 50px;
+    padding: 10px 14px;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.1s;
+}
+
+.privs-row:last-child {
+    border-bottom: none;
+}
+
+.privs-row:hover {
+    background: #f8f9ff;
+}
+
+.privs-module-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.privs-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.privs-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #1a1a2e;
+}
+
+/* ── Edit Privileges ────────────────────────────────── */
+.ep-content {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.ep-error {
+    color: #c62828;
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.ep-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ── Common Buttons ─────────────────────────────────── */
+.cancel-btn {
+    padding: 10px 20px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    color: #666;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.cancel-btn:hover {
+    border-color: #bbb;
+    color: #333;
+}
+
+.submit-btn {
+    padding: 10px 20px;
+    border: none;
+    background: #1a1a2e;
+    color: white;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.submit-btn:hover {
+    background: #16213e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 26, 46, 0.3);
+}
+
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 768px) {
+    .profile-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    .profile-actions {
+        flex-direction: row;
+    }
+    .cu-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    .privs-header, .privs-row {
+        grid-template-columns: 100px repeat(6, 1fr) 40px;
+        font-size: 10px;
+    }
+    .privs-module-label {
+        font-size: 11px;
+    }
+}
+
+
+.privs-na {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 600;
+    user-select: none;
+}
+
+
+/* ── Inline Edit ────────────────────────────────────── */
+.profile-role-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.profile-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-edit-row {
+    display: flex;
+    gap: 10px;
+}
+
+.profile-edit-row input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: border-color 0.15s;
+}
+
+.profile-edit-row input:focus {
+    outline: none;
+    border-color: #4fc3f7;
+}
+
+.profile-edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.profile-edit-error {
+    color: #c62828;
+    font-size: 12px;
+    background: #ffebee;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+.btn-edit-profile {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid #e0e0e0;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.btn-edit-profile:hover {
+    border-color: #1a1a2e;
+    background: #f8f9ff;
+}
+
+.btn-edit-user {
+    padding: 5px 10px;
+    border: 1px solid #1a1a2e;
+    background: transparent;
+    color: #1a1a2e;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-edit-user:hover {
+    background: #1a1a2e;
+    color: white;
+}

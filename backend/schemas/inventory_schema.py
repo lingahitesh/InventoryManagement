@@ -13,6 +13,7 @@ class InventoryCreate(BaseModel):
     sku_cost_price: float
     tracking_id:    Optional[str]      = None
     entry_date:     Optional[datetime] = None   # full timestamp; defaults to now()
+    location:       Optional[str]      = "M-Gram"
 
 
 class InventoryUpdate(BaseModel):
@@ -25,3 +26,4 @@ class InventoryUpdate(BaseModel):
     sku_cost_price: float
     tracking_id:    Optional[str]      = None
     entry_date:     Optional[datetime] = None
+    location:       Optional[str]      = "M-Gram"

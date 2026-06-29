@@ -4,6 +4,7 @@ from backend.services.payment_service import (
     get_payments, add_payment, update_payment, delete_payment, get_customer_balance
 )
 from backend.services.ledger_service import generate_ledger_pdf
+from backend.services.dues_service import get_customer_dues_summary, get_customer_dues_detail, get_order_items_breakdown
 from backend.schemas.payment_schema import PaymentCreate
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -33,6 +34,24 @@ def customer_balance(customer_id: int):
     return get_customer_balance(customer_id)
 
 
+@router.get("/dues")
+def list_dues():
+    """Get all customers with outstanding dues."""
+    return get_customer_dues_summary()
+
+
+@router.get("/dues/{customer_id}")
+def customer_dues_detail(customer_id: int):
+    """Get order-level dues breakdown for a customer."""
+    return get_customer_dues_detail(customer_id)
+
+
+@router.get("/dues/{customer_id}/order/{order_id}/items")
+def order_items_for_dues(customer_id: int, order_id: int):
+    """Get item-level breakdown for a specific order."""
+    return get_order_items_breakdown(order_id)
+
+
 @router.get("/ledger/{customer_id}")
 def download_ledger(customer_id: int, date_from: str, date_to: str):
     pdf_bytes = generate_ledger_pdf(customer_id, date_from, date_to)
@@ -41,7 +60,7 @@ def download_ledger(customer_id: int, date_from: str, date_to: str):
     return Response(
         content=bytes(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=Ledger_{customer_id}.pdf"}
+        headers={"Content-Disposition": f"inline; filename=Ledger_{customer_id}.pdf"}
     )
 
 

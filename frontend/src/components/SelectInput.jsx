@@ -39,15 +39,20 @@ function SelectInput({ value, onChange, options = [], placeholder = "", disabled
         if (!e.target.value) onChange({ target: { value: "" } });
     };
 
+    const inputRef = useRef(null);
+
     const handleSelect = (opt) => {
         setQuery(opt);
         setOpen(false);
         onChange({ target: { value: opt } });
+        // Blur input to prevent onFocus from reopening
+        if (inputRef.current) inputRef.current.blur();
     };
 
     return (
         <div className="si-wrap" ref={wrapRef} id={id}>
             <input
+                ref={inputRef}
                 className="si-input"
                 value={query}
                 onChange={handleInput}

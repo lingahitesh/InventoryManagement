@@ -1,4 +1,5 @@
-.po-container { padding: 10px; }
+.po-container { padding: 0; animation: poFadeIn 0.4s ease; }
+@keyframes poFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 .po-header-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -40,18 +41,18 @@
     padding: 12px; margin-bottom: 10px; background: white;
 }
 
-.po-cart-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
+.po-cart-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
 .po-cart-row:last-child { margin-bottom: 0; }
 
-.po-cart-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 100px; }
+.po-cart-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
 .po-cart-field label { font-size: 11px; font-weight: 600; color: #666; }
 .po-cart-field input, .po-cart-field select {
-    padding: 7px 10px; border: 1.5px solid #d0d0d0; border-radius: 5px;
-    font-size: 13px; color: #1a1a2e; background: white; transition: border-color 0.2s;
+    padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px;
+    font-size: 14px; color: #1a1a2e; background: white; transition: border-color 0.2s;
 }
 .po-cart-field input:focus, .po-cart-field select:focus { outline: none; border-color: #4fc3f7; }
 .po-cart-field input:disabled { background: #f5f5f5; color: #999; }
-.po-cart-field-wide { flex: 2; }
+.po-cart-field-wide { flex: 2.5; min-width: 200px; }
 
 .po-qty-row { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; }
 .po-qty-row input { flex: 1; }
@@ -130,3 +131,87 @@
 }
 
 .po-qty-data-row input:focus { outline: none; border-color: #4fc3f7; }
+
+
+/* ── Confirm button ── */
+.po-confirm-btn {
+    padding: 3px 10px; border-radius: 5px; border: 1.5px solid #1565c0;
+    background: #e3f2fd; color: #1565c0; font-weight: 700; font-size: 11px;
+    cursor: pointer; margin-right: 4px; transition: all 0.2s;
+}
+.po-confirm-btn:hover { background: #bbdefb; }
+
+/* ── Edit button (main row level) ── */
+.po-edit-btn {
+    padding: 3px 8px; border-radius: 5px; border: 1.5px solid #f57c00;
+    background: #fff3e0; color: #f57c00; font-size: 11px;
+    cursor: pointer; margin-left: 4px; transition: all 0.2s;
+}
+.po-edit-btn:hover:not(:disabled) { background: #ffe0b2; }
+.po-edit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.po-item-actions { white-space: nowrap; text-align: right; }
+
+/* ── PO Invoice button (main row) ── */
+.po-invoice-btn {
+    padding: 4px 10px; border-radius: 5px; border: 1.5px solid #5e35b1;
+    background: #ede7f6; color: #5e35b1; font-weight: 700; font-size: 12px;
+    cursor: pointer; margin-right: 4px; transition: all 0.2s;
+}
+.po-invoice-btn:hover { background: #d1c4e9; }
+
+/* ── Confirm status badge ── */
+.ol-status--confirm {
+    background: #e3f2fd; color: #1565c0; border-radius: 4px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700;
+}
+.ol-status--unconfirmed {
+    background: #fff3e0; color: #e65100; border-radius: 4px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700;
+}
+.ol-status--inprocess {
+    background: #e8f5e9; color: #2e7d32; border-radius: 4px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700;
+}
+
+/* ── PO Invoice Preview (PDF iframe) ── */
+.po-invoice-preview { padding: 8px; min-width: 700px; }
+
+.po-invoice-controls {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+    padding: 12px; background: #f5f5f5; border-radius: 8px;
+}
+.po-invoice-inputs { display: flex; gap: 16px; flex-wrap: wrap; }
+.po-invoice-inputs label {
+    font-size: 12px; font-weight: 600; color: #555;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.po-invoice-inputs input {
+    padding: 6px 10px; border: 1.5px solid #d0d0d0; border-radius: 5px;
+    font-size: 13px; width: 160px;
+}
+.po-invoice-actions { display: flex; gap: 8px; }
+
+/* Disabled state for arrived > 24h */
+.po-arrive-btn:disabled, .po-arrive-all-btn:disabled {
+    opacity: 0.4; cursor: not-allowed;
+}
+
+/* ── PO Search Row ── */
+.po-search-row {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: flex-end;
+}
+.po-search-field {
+    display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px;
+}
+.po-search-field label {
+    font-size: 11px; font-weight: 600; color: #666;
+    text-transform: uppercase; letter-spacing: 0.3px;
+}
+.po-search-input {
+    padding: 8px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+    font-size: 13px; color: #1a1a2e; min-width: 120px; flex: 1;
+    transition: all 0.2s; height: 38px; box-sizing: border-box;
+}
+.po-search-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }

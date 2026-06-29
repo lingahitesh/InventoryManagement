@@ -51,7 +51,7 @@ function FilterBar({ onFilterChange, resetKey })
     );
 }
 
-function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onViewRecord, refreshKey })
+function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onViewRecord, refreshKey, privileges, canCreateOrder })
 {
     const inlineRef = useRef({ type: "", subtype: "", dim: "" });
     const [resetKey,        setResetKey]        = useState(0);
@@ -141,9 +141,41 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
         setAdvTrackingId(""); setAdvCostPriceMin(""); setAdvCostPriceMax("");
         setAdvDateFrom(""); setAdvDateTo(""); setAdvOpen(false);
         setExpanded({});
+        setSortMode("default");
         setResetKey(k => k + 1);
         doFetch("", "", "", "", "", "", "", "", true);
     };
+
+    // ── Sort ─────────────────────────────────────────────────
+    const [sortMode, setSortMode] = useState("default"); // default, a-z, z-a, date, size, qty
+
+    const sortedSummary = (() => {
+        const arr = [...summary];
+        switch (sortMode) {
+            case "a-z":
+                return arr.sort((a, b) => (a.sku_type + a.sku_subtype).localeCompare(b.sku_type + b.sku_subtype));
+            case "z-a":
+                return arr.sort((a, b) => (b.sku_type + b.sku_subtype).localeCompare(a.sku_type + a.sku_subtype));
+            case "date":
+                return arr.sort((a, b) => {
+                    const aDate = records.filter(r => r.sku_type === a.sku_type && r.sku_subtype === a.sku_subtype && r.sku_dim === a.sku_dim)
+                        .reduce((max, r) => r.entry_date > max ? r.entry_date : max, "");
+                    const bDate = records.filter(r => r.sku_type === b.sku_type && r.sku_subtype === b.sku_subtype && r.sku_dim === b.sku_dim)
+                        .reduce((max, r) => r.entry_date > max ? r.entry_date : max, "");
+                    return bDate.localeCompare(aDate);
+                });
+            case "size":
+                return arr.sort((a, b) => {
+                    const aNum = parseFloat(a.sku_dim) || 0;
+                    const bNum = parseFloat(b.sku_dim) || 0;
+                    return bNum - aNum;
+                });
+            case "qty":
+                return arr.sort((a, b) => parseFloat(b.total_quantity) - parseFloat(a.total_quantity));
+            default:
+                return arr;
+        }
+    })();
 
     // ── Expand ───────────────────────────────────────────────
     const summaryKey    = (row) => `${row.sku_type}|${row.sku_subtype}|${row.sku_dim}`;
@@ -182,6 +214,9 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
         return { date: d || "—", time: t ? t.slice(0, 8) : "—" };
     };
 
+    // ── Today's date string for NEW badge comparison ─────────
+    const todayStr = new Date().toLocaleDateString("en-CA");
+
     return (
         <div className="retrieval-container">
 
@@ -194,10 +229,22 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
             />
 
             <div className="retrieval-header-row">
-                <h1>Inventory</h1>
+                <div>
+                    <h1>Inventory</h1>
+                </div>
                 <div className="retrieval-toolbar">
                     <button className="rtb-btn" onClick={() => { setExpanded({}); handleRefresh(); }} disabled={loading}>↻</button>
                     <button className="rtb-btn" onClick={handleClear} disabled={loading}>✕ Clear</button>
+                    <div className="rtb-sort-wrap">
+                        <select className="rtb-sort" value={sortMode} onChange={e => setSortMode(e.target.value)}>
+                            <option value="default">Sort</option>
+                            <option value="a-z">A → Z ↓</option>
+                            <option value="z-a">Z → A ↑</option>
+                            <option value="date">Date</option>
+                            <option value="size">Size</option>
+                            <option value="qty">Quantity</option>
+                        </select>
+                    </div>
                     <button className="rtb-btn rtb-adv" onClick={() => setAdvOpen(o => !o)}>
                         {advOpen ? "▲ Adv. Search" : "▼ Adv. Search"}
                     </button>
@@ -262,22 +309,31 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                     <div className="retrieval-table-scroll">
                         <table className="retrieval-table">
                             <tbody>
-                                {summary.map(row =>
+                                {sortedSummary.map(row =>
                                 {
                                     const key    = summaryKey(row);
                                     const isOpen = !!expanded[key];
                                     const dets   = detailsForKey(row);
+
+                                    // ── NEW badge: true if any batch in this group was entered today ──
+                                    const isSummaryNew = dets.some(
+                                        r => r.entry_date && r.entry_date.slice(0, 10) === todayStr
+                                    );
+
                                     return (
                                         <Fragment key={key}>
                                             <tr className="summary-row">
-                                                <td>{row.sku_type}</td>
+                                                <td>
+                                                    {isSummaryNew && <span className="summary-new-badge">NEW</span>}
+                                                    {row.sku_type}
+                                                </td>
                                                 <td>{row.sku_subtype}</td>
                                                 <td>{row.sku_dim}</td>
                                                 <td className="td-qty">{parseFloat(row.total_quantity).toFixed(3)}</td>
                                                 <td>{row.batch_count}</td>
                                                 <td className="col-actions">
-                                                    <button className="retrieval-cart-btn"
-                                                        onClick={() => onOrderWithProduct(row.sku_type, row.sku_subtype, row.sku_dim)}>🛒</button>
+                                                    {canCreateOrder && <button className="retrieval-cart-btn"
+                                                        onClick={() => onOrderWithProduct(row.sku_type, row.sku_subtype, row.sku_dim)}>🛒</button>}
                                                     <button className="retrieval-expand-btn" onClick={() => toggleExpand(key)}>
                                                         {isOpen ? "▲ Hide" : "▼ Details"}
                                                     </button>
@@ -292,7 +348,7 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                                                                     <th>Type</th><th>Sub Type</th><th>Dimensions</th>
                                                                     <th className="th-qty">Quantity (kgs)</th>
                                                                     <th className="th-price">Cost Price (Rs.)</th>
-                                                                    <th>Units</th><th>Tracking ID</th>
+                                                                    <th>Units</th><th>Location</th><th>Tracking ID</th>
                                                                     <th>Entry Date</th><th></th>
                                                                 </tr>
                                                             </thead>
@@ -300,19 +356,25 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                                                                 {dets.map(r =>
                                                                 {
                                                                     const { date } = splitDt(r.entry_date);
-                                                                    return (
+                                                                    const isNew = r.entry_date && r.entry_date.slice(0,10) === todayStr;
+                                                                    return (    
                                                                         <tr key={r.sku_id}>
-                                                                            <td>{r.sku_type}</td>
+                                                                            <td>
+                                                                                {isNew && <span className="summary-new-badge-subtable">●</span>}
+                                                                                {r.sku_type}
+                                                                            </td>
                                                                             <td>{r.sku_subtype}</td><td>{r.sku_dim}</td>
                                                                             <td className="td-qty">{parseFloat(r.sku_quantity).toFixed(3)}</td>
                                                                             <td className="td-price">{parseFloat(r.sku_cost_price).toFixed(2)}</td>
-                                                                            <td>{r.sku_units}</td><td>{r.tracking_id || "—"}</td>
+                                                                            <td>{r.sku_units}</td>
+                                                                            <td>{r.location || "M-Gram"}</td>
+                                                                            <td>{r.tracking_id || "—"}</td>
                                                                             <td>{date}</td>
                                                                             <td>
                                                                                 <div className="detail-actions">
                                                                                     <button className="retrieval-search-button" title="View" onClick={() => onViewRecord(r)}>🔍</button>
-                                                                                    <button className="retrieval-edit-btn" onClick={() => onEditRecord(r)}>✎</button>
-                                                                                    <button className="retrieval-delete-btn" onClick={() => handleDeleteClick(r)}>🗑</button>
+                                                                                    {privileges?.edit !== false && <button className="retrieval-edit-btn" onClick={() => onEditRecord(r)}>✎</button>}
+                                                                                    {privileges?.delete !== false && <button className="retrieval-delete-btn" onClick={() => handleDeleteClick(r)}>🗑</button>}
                                                                                 </div>
                                                                             </td>
                                                                         </tr>
@@ -332,7 +394,7 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                 )}
             </div>
 
-            <button className="retrieval-fab" onClick={onAddRecord} title="Add new SKU">+</button>
+            {privileges?.create !== false && <button className="retrieval-fab" onClick={onAddRecord} title="Add new SKU">+</button>}
 
         </div>
     );

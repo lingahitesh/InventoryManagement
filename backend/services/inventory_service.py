@@ -3,7 +3,7 @@ import oracledb as db
 
 KEYS = ["sku_id", "sku_type", "sku_subtype", "sku_dim",
         "sku_quantity", "sku_cost_price", "sku_desc", "sku_units",
-        "tracking_id", "entry_date"]
+        "tracking_id", "entry_date", "location"]
 
 
 def row_to_dict(row):
@@ -19,7 +19,7 @@ def row_to_dict(row):
 
 def add_inventory(sku_type, sku_subtype, sku_dim, sku_quantity,
                   sku_cost_price, sku_desc, sku_units,
-                  tracking_id=None, entry_date=None):
+                  tracking_id=None, entry_date=None, location="M-Gram"):
     from datetime import datetime
     resolved_dt = entry_date if entry_date else datetime.now()
     conn = get_db()
@@ -28,11 +28,11 @@ def add_inventory(sku_type, sku_subtype, sku_dim, sku_quantity,
     cursor.execute("""
         INSERT INTO inventory
             (sku_id, sku_type, sku_subtype, sku_dim, sku_quantity,
-             sku_cost_price, sku_desc, sku_units, tracking_id, entry_date)
-        VALUES (inventory_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8, :9)
-        RETURNING sku_id INTO :10
+             sku_cost_price, sku_desc, sku_units, tracking_id, entry_date, location)
+        VALUES (inventory_seq.NEXTVAL, :1, :2, :3, :4, :5, :6, :7, :8, :9, :10)
+        RETURNING sku_id INTO :11
     """, [sku_type, sku_subtype, sku_dim, sku_quantity,
-          sku_cost_price, sku_desc, sku_units, tracking_id, resolved_dt, sku_id_var])
+          sku_cost_price, sku_desc, sku_units, tracking_id, resolved_dt, location, sku_id_var])
     conn.commit()
     new_id = sku_id_var.getvalue()[0]
     cursor.close()
@@ -46,25 +46,25 @@ def add_inventory(sku_type, sku_subtype, sku_dim, sku_quantity,
 
 def update_inventory(sku_id, sku_type, sku_subtype, sku_dim, sku_quantity,
                      sku_cost_price, sku_desc, sku_units,
-                     tracking_id=None, entry_date=None):
+                     tracking_id=None, entry_date=None, location="M-Gram"):
     conn = get_db()
     cursor = conn.cursor()
     if entry_date is not None:
         cursor.execute("""
             UPDATE inventory
             SET sku_type=:1, sku_subtype=:2, sku_dim=:3, sku_quantity=:4,
-                sku_cost_price=:5, sku_desc=:6, sku_units=:7, tracking_id=:8, entry_date=:9
-            WHERE sku_id=:10
+                sku_cost_price=:5, sku_desc=:6, sku_units=:7, tracking_id=:8, entry_date=:9, location=:10
+            WHERE sku_id=:11
         """, [sku_type, sku_subtype, sku_dim, sku_quantity,
-              sku_cost_price, sku_desc, sku_units, tracking_id, entry_date, sku_id])
+              sku_cost_price, sku_desc, sku_units, tracking_id, entry_date, location, sku_id])
     else:
         cursor.execute("""
             UPDATE inventory
             SET sku_type=:1, sku_subtype=:2, sku_dim=:3, sku_quantity=:4,
-                sku_cost_price=:5, sku_desc=:6, sku_units=:7, tracking_id=:8
-            WHERE sku_id=:9
+                sku_cost_price=:5, sku_desc=:6, sku_units=:7, tracking_id=:8, location=:9
+            WHERE sku_id=:10
         """, [sku_type, sku_subtype, sku_dim, sku_quantity,
-              sku_cost_price, sku_desc, sku_units, tracking_id, sku_id])
+              sku_cost_price, sku_desc, sku_units, tracking_id, location, sku_id])
     rows = cursor.rowcount
     conn.commit()
     cursor.close()
@@ -97,7 +97,7 @@ def get_inventory():
     cursor.execute("""
         SELECT sku_id, sku_type, sku_subtype, sku_dim,
                sku_quantity, sku_cost_price, sku_desc, sku_units,
-               tracking_id, entry_date
+               tracking_id, entry_date, location
         FROM inventory ORDER BY sku_id
     """)
     rows = cursor.fetchall()
@@ -120,7 +120,7 @@ def search_inventory(sku_type=None, sku_subtype=None, sku_dim=None,
     query = """
         SELECT sku_id, sku_type, sku_subtype, sku_dim,
                sku_quantity, sku_cost_price, sku_desc, sku_units,
-               tracking_id, entry_date
+               tracking_id, entry_date, location
         FROM inventory WHERE 1=1
     """
     params = []
@@ -230,7 +230,7 @@ def get_matching_skus(sku_type, sku_subtype, sku_dim):
         cursor.execute("""
             SELECT sku_id, sku_type, sku_subtype, sku_dim,
                    sku_quantity, sku_cost_price, sku_desc, sku_units,
-                   tracking_id, entry_date
+                   tracking_id, entry_date, location
             FROM inventory
             WHERE sku_type=:1 AND sku_subtype=:2 AND sku_dim=:3 AND sku_units > 0
             ORDER BY sku_id ASC
@@ -247,7 +247,7 @@ def get_matching_skus(sku_type, sku_subtype, sku_dim):
             cursor.execute("""
                 SELECT sku_id, sku_type, sku_subtype, sku_dim,
                        sku_quantity, sku_cost_price, sku_desc, sku_units,
-                       tracking_id, entry_date
+                       tracking_id, entry_date, location
                 FROM inventory
                 WHERE sku_type=:1 AND sku_subtype=:2 AND sku_units > 0
                   AND TO_NUMBER(REGEXP_SUBSTR(sku_dim, '^\d+')) BETWEEN :3 AND :4
@@ -257,7 +257,7 @@ def get_matching_skus(sku_type, sku_subtype, sku_dim):
             cursor.execute("""
                 SELECT sku_id, sku_type, sku_subtype, sku_dim,
                        sku_quantity, sku_cost_price, sku_desc, sku_units,
-                       tracking_id, entry_date
+                       tracking_id, entry_date, location
                 FROM inventory
                 WHERE sku_type=:1 AND sku_subtype=:2 AND sku_dim=:3 AND sku_units > 0
                 ORDER BY sku_id ASC
@@ -306,3 +306,61 @@ def get_next_sku_id():
     cursor.close()
     conn.close()
     return row[0] if row else 1
+
+
+###############################
+# PRICE HISTORY — for the info tooltip in Place Order
+###############################
+
+def get_price_history(sku_type, sku_subtype, sku_dim, customer_id=None):
+    """
+    Returns:
+    - min, max, avg selling price over last 3 months for this type/subtype (irrespective of dim)
+    - last 3 selling prices for a specific customer (irrespective of dim)
+    """
+    from datetime import datetime, timedelta
+    three_months_ago = datetime.now() - timedelta(days=90)
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Global stats: min/max/avg selling_price over last 3 months (no dim filter)
+    cursor.execute("""
+        SELECT MIN(oi.selling_price), MAX(oi.selling_price), AVG(oi.selling_price)
+        FROM order_items oi
+        JOIN orders o ON o.order_id = oi.order_id
+        JOIN inventory i ON i.sku_id = oi.sku_id
+        WHERE i.sku_type = :1 AND i.sku_subtype = :2
+          AND o.order_date >= :3
+    """, [sku_type, sku_subtype, three_months_ago])
+    row = cursor.fetchone()
+    stats = {
+        "min_price": round(float(row[0]), 2) if row and row[0] else None,
+        "max_price": round(float(row[1]), 2) if row and row[1] else None,
+        "avg_price": round(float(row[2]), 2) if row and row[2] else None,
+    }
+
+    # Last 3 prices for the specific customer (no dim filter)
+    customer_prices = []
+    if customer_id:
+        cursor.execute("""
+            SELECT oi.selling_price, i.sku_cost_price, o.order_date
+            FROM order_items oi
+            JOIN orders o ON o.order_id = oi.order_id
+            JOIN inventory i ON i.sku_id = oi.sku_id
+            WHERE i.sku_type = :1 AND i.sku_subtype = :2
+              AND o.customer_id = :3
+            ORDER BY o.order_date DESC
+            FETCH FIRST 3 ROWS ONLY
+        """, [sku_type, sku_subtype, customer_id])
+        for sp, cp, dt in cursor.fetchall():
+            customer_prices.append({
+                "selling_price": round(float(sp), 2) if sp else None,
+                "cost_price": round(float(cp), 2) if cp else None,
+                "date": dt.isoformat()[:10] if dt and hasattr(dt, "isoformat") else str(dt)[:10] if dt else None,
+            })
+
+    cursor.close()
+    conn.close()
+
+    return {"stats": stats, "customer_prices": customer_prices}

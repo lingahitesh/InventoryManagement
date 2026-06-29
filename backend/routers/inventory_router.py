@@ -13,7 +13,7 @@ def create_inventory(inv: InventoryCreate):
     new_id = add_inventory(
         inv.sku_type, inv.sku_subtype, inv.sku_dim,
         inv.sku_quantity, inv.sku_cost_price, inv.sku_desc, inv.sku_units,
-        inv.tracking_id, inv.entry_date
+        inv.tracking_id, inv.entry_date, inv.location
     )
     return {"message": "Inventory Added", "sku_id": new_id}
 
@@ -73,7 +73,7 @@ def edit_inventory(sku_id: int, inv: InventoryUpdate):
         sku_id,
         inv.sku_type, inv.sku_subtype, inv.sku_dim,
         inv.sku_quantity, inv.sku_cost_price, inv.sku_desc, inv.sku_units,
-        inv.tracking_id, inv.entry_date
+        inv.tracking_id, inv.entry_date, inv.location
     )
     if rows == 0:
         raise HTTPException(status_code=404, detail="SKU not found")
@@ -86,3 +86,10 @@ def remove_inventory(sku_id: int):
     if rows == 0:
         raise HTTPException(status_code=404, detail="SKU not found")
     return {"message": "Inventory Deleted"}
+
+
+@router.get("/price-history")
+def price_history(sku_type: str, sku_subtype: str, sku_dim: str, customer_id: int = None):
+    """Get min/max/avg selling price over last 3 months and last 3 prices for a customer."""
+    from backend.services.inventory_service import get_price_history
+    return get_price_history(sku_type, sku_subtype, sku_dim, customer_id)

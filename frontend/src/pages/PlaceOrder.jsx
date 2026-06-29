@@ -1,9 +1,83 @@
 import { useState, useEffect } from "react";
 import "../styles/place-order.css";
 import ConfirmDialog from "../components/ConfirmDialog";
-import { getCustomers, getInventory, checkAvailability, placeOrder, deleteOrder, getShippingAddresses } from "../api";
+import { getCustomers, getInventory, checkAvailability, placeOrder, deleteOrder, getShippingAddresses, getPriceHistory } from "../api";
 import { useProductMaster } from "../hooks/useProductMaster";
 import ComboInput from "../components/ComboInput";
+
+function PriceInfoBtn({ skuType, skuSubtype, skuDim, costPrice, customerId }) {
+    const [show, setShow] = useState(false);
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [lastCustomer, setLastCustomer] = useState(customerId);
+
+    // Reset cached data when customer changes
+    if (customerId !== lastCustomer) {
+        setData(null);
+        setLastCustomer(customerId);
+    }
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const result = await getPriceHistory(skuType, skuSubtype, skuDim, customerId);
+            setData(result);
+        } catch { setData({ stats: {}, customer_prices: [] }); }
+        finally { setLoading(false); }
+    };
+
+    const handleHover = () => {
+        setShow(true);
+        if (!data) fetchData();
+    };
+
+    const fmtPrice = (sp, cp) => {
+        if (!sp) return "—";
+        cp = cp || parseFloat(costPrice) || 0;
+        const margin = sp - cp;
+        return (
+            <span>
+                <span style={{color:"#fff"}}>{cp.toFixed(2)}</span>
+                {margin >= 0
+                    ? <span style={{color:"#4caf50"}}> +{margin.toFixed(2)}</span>
+                    : <span style={{color:"#f44336"}}> {margin.toFixed(2)}</span>}
+            </span>
+        );
+    };
+
+    return (
+        <span className="price-info-wrap"
+            onMouseEnter={handleHover} onMouseLeave={() => setShow(false)}>
+            <button className="price-info-btn" type="button"
+                onClick={handleHover}>ℹ</button>
+            {show && (
+                <div className="price-info-tooltip">
+                    {loading ? <div>Loading…</div> : data ? (
+                        <>
+                            <div className="pit-section">
+                                <strong>Last 3 Months (all customers)</strong>
+                                <div>Min: {fmtPrice(data.stats.min_price, parseFloat(costPrice))}</div>
+                                <div>Max: {fmtPrice(data.stats.max_price, parseFloat(costPrice))}</div>
+                                <div>Avg: {fmtPrice(data.stats.avg_price, parseFloat(costPrice))}</div>
+                            </div>
+                            {data.customer_prices.length > 0 && (
+                                <div className="pit-section">
+                                    <strong>Last 3 to this customer</strong>
+                                    {data.customer_prices.map((p, i) => (
+                                        <div key={i}>{p.date}: {fmtPrice(p.selling_price, p.cost_price)}</div>
+                                    ))}
+                                </div>
+                            )}
+                            {data.customer_prices.length === 0 && (
+                                <div className="pit-section"><em>No history for this customer</em></div>
+                            )}
+                        </>
+                    ) : <div>No data</div>}
+                </div>
+            )}
+        </span>
+    );
+}
 
 function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCart, getCartReserved, onOrderSuccess, orderPrefill, clearOrderPrefill, editingOrder, clearEditingOrder })
 {
@@ -32,7 +106,9 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const [unitCounts, setUnitCounts] = useState({});
 
     const [sellingPrice, setSellingPrice] = useState("");
+    const [rowPrices, setRowPrices] = useState({});
     const [deliveryCharge, setDeliveryCharge] = useState("");
+    const [paymentTerms, setPaymentTerms] = useState("30");
 
     const [submitConfirm, setSubmitConfirm] = useState(false);
     const [cancelConfirm, setCancelConfirm] = useState(false);
@@ -104,6 +180,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                 setShippingAddress(editingOrder.shipping_address || fullAddress(cust));
             }
             setDeliveryCharge(editingOrder.delivery_charge ? String(editingOrder.delivery_charge) : "");
+            setPaymentTerms(editingOrder.terms_of_payment ? String(editingOrder.terms_of_payment) : "30");
             // Pre-fill cart from order items — merge items with same sku_id + sellingPrice
             const mergedCart = [];
             for (const item of (editingOrder.items || [])) {
@@ -170,7 +247,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
     const resetProductFields = () =>
     {
         setSelType(""); setSelSubtype(""); setSelDim("");
-        setSellingPrice(""); setAvailSkus(null); setUnitCounts({});
+        setSellingPrice(""); setAvailSkus(null); setUnitCounts({}); setRowPrices({});
     };
 
     // ── Stepper helpers ───────────────────────────────────────
@@ -258,17 +335,20 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
         else if (totalUnitsSelected <= 0)
             errors.filters = "Select at least 1 unit using the + / − buttons";
 
-        if (!sellingPrice.trim() || isNaN(parseFloat(sellingPrice)) || parseFloat(sellingPrice) <= 0)
-            errors.sellingPrice = "Enter a valid selling price";
+        // Validate per-row prices
+        const selectedSkus = availSkus.skus.filter(s => (unitCounts[s.sku_id] || 0) > 0);
+        for (const s of selectedSkus) {
+            const p = rowPrices[s.sku_id] || sellingPrice;
+            if (!p || isNaN(parseFloat(p)) || parseFloat(p) <= 0) {
+                errors.sellingPrice = "Enter a valid selling price for all selected items";
+                break;
+            }
+        }
 
         setProductErrors(errors);
         if (Object.keys(errors).length > 0) return;
 
-        // Build cart entries — one per SKU row that has units > 0
-        // kg_per_unit comes from the backend — no division on frontend
-        const newItems = availSkus.skus
-            .filter(s => (unitCounts[s.sku_id] || 0) > 0)
-            .map(s => ({
+        const newItems = selectedSkus.map(s => ({
                 sku_type:     selType,
                 sku_subtype:  toRawSub(selSubtype),
                 sku_dim:      selDim,
@@ -276,7 +356,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                 quantity:     unitCounts[s.sku_id],
                 skuQuantity:  parseFloat(s.sku_quantity),
                 skuUnits:     parseInt(s.sku_units) || 1,
-                sellingPrice: parseFloat(sellingPrice)
+                sellingPrice: parseFloat(rowPrices[s.sku_id] || sellingPrice)
             }));
 
         setProductErrors({});
@@ -314,6 +394,7 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
             if (!shippingAddress.trim()) errors.shipping = "Shipping address is required";
         }
         if (cart.length === 0)       errors.cart     = "Add at least one item to the cart";
+        if (!paymentTerms || parseInt(paymentTerms) <= 0) errors.paymentTerms = "Terms of payment is required";
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -338,12 +419,13 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
 
             await placeOrder({
                 customer_id:      selectedCustomer.customer_id,
-                order_date:       new Date().toISOString().split("T")[0],
+                order_date:       new Date().toLocaleDateString("en-CA"),
                 shipping_address: finalShipAddr,
                 total_units:      cartTotalUnits,
                 total_qty:        cartTotalQty,
                 total_amount:     cartTotalAmount,
                 delivery_charge:  parseFloat(deliveryCharge) || 0,
+                terms_of_payment: parseInt(paymentTerms) || 30,
                 lines: cart.map(item => ({
                     sku_type:      item.sku_type,
                     sku_subtype:   item.sku_subtype,
@@ -451,13 +533,23 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                     />
 
                     <label>Contact :</label>
-                    <input value={selectedCustomer?.contact || ""} placeholder="Contact" readOnly />
+                    <div className="multi-value-boxes">
+                        {(selectedCustomer?.contact || "").split(",").filter(v => v.trim()).map((v, i) => (
+                            <span key={i} className="value-chip">{v.trim()}</span>
+                        ))}
+                        {!(selectedCustomer?.contact) && <span className="value-chip empty">Contact</span>}
+                    </div>
 
                     <label>GST :</label>
                     <input value={selectedCustomer?.gst || ""} placeholder="GST" readOnly />
 
                     <label>Email ID :</label>
-                    <input value={selectedCustomer?.email || ""} placeholder="Email ID" readOnly />
+                    <div className="multi-value-boxes">
+                        {(selectedCustomer?.email || "").split(",").filter(v => v.trim()).map((v, i) => (
+                            <span key={i} className="value-chip">{v.trim()}</span>
+                        ))}
+                        {!(selectedCustomer?.email) && <span className="value-chip empty">Email ID</span>}
+                    </div>
 
                     <label>Billing Address :</label>
                     <input value={selectedCustomer ? fullAddress(selectedCustomer) : ""} placeholder="Billing Address" readOnly />
@@ -571,28 +663,38 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                                 <table className="avail-table">
                                     <thead>
                                         <tr>
-                                            <th>SKU ID</th>
                                             <th>Dim</th>
-                                            <th className="th-qty">Quantity / Unit (kgs)</th>
+                                            <th className="th-qty">Qty / Unit (kgs)</th>
                                             <th className="th-price">Cost Price (Rs.)</th>
                                             <th className="th-center">Units</th>
+                                            <th>Location</th>
                                             <th>Description</th>
+                                            <th className="th-center"></th>
                                             <th className="th-center">Units to Order</th>
+                                            <th className="th-price">Selling Price</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {availSkus.skus.map(s =>
+                                        {[...availSkus.skus].sort((a, b) => {
+                                            const dimA = parseFloat(a.sku_dim) || 0;
+                                            const dimB = parseFloat(b.sku_dim) || 0;
+                                            if (dimA !== dimB) return dimA - dimB;
+                                            return (parseFloat(b.sku_quantity) || 0) - (parseFloat(a.sku_quantity) || 0);
+                                        }).map(s =>
                                         {
                                             const maxUnits = Math.max(0, (s.sku_units || 0) - cartReservedUnits);
                                             const cur      = unitCounts[s.sku_id] || 0;
                                             return (
                                                 <tr key={s.sku_id}>
-                                                    <td>{s.sku_id}</td>
                                                     <td>{s.sku_dim}</td>
                                                     <td className="td-qty">{parseFloat(s.sku_quantity).toFixed(3)}</td>
                                                     <td className="td-price">{parseFloat(s.sku_cost_price).toFixed(2)}</td>
                                                     <td className="td-center">{maxUnits}</td>
+                                                    <td style={{textAlign:"center"}}>{s.location || "M-Gram"}</td>
                                                     <td>{s.sku_desc || "—"}</td>
+                                                    <td className="td-center">
+                                                        <PriceInfoBtn skuType={selType} skuSubtype={toRawSub(selSubtype)} skuDim={s.sku_dim} costPrice={s.sku_cost_price} customerId={selectedCustomer?.customer_id} />
+                                                    </td>
                                                     <td className="td-center">
                                                         <div className="unit-stepper">
                                                             <button className="stepper-btn stepper-minus"
@@ -602,11 +704,25 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                                                                 onClick={() => stepUp(s.sku_id, maxUnits)} disabled={cur >= maxUnits}>+</button>
                                                         </div>
                                                     </td>
+                                                    <td style={{textAlign:"right"}}>
+                                                        <input type="number" min="0" step="1" className="row-price-input"
+                                                            value={rowPrices[s.sku_id] ?? sellingPrice}
+                                                            onChange={e => setRowPrices(p => ({...p, [s.sku_id]: e.target.value}))}
+                                                            placeholder="0.00" />
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
                                     </tbody>
                                 </table>
+                                <div className="avail-avg-cost">
+                                    Avg Stock Cost: <strong>₹{(() => {
+                                        const totalQty = availSkus.skus.reduce((s, sk) => s + (parseFloat(sk.sku_quantity) || 0) * (parseInt(sk.sku_units) || 0), 0);
+                                        if (totalQty === 0) return "0.00";
+                                        const weightedSum = availSkus.skus.reduce((s, sk) => s + (parseFloat(sk.sku_quantity) || 0) * (parseInt(sk.sku_units) || 0) * (parseFloat(sk.sku_cost_price) || 0), 0);
+                                        return (weightedSum / totalQty).toFixed(2);
+                                    })()}</strong> per kg
+                                </div>
                             </>
                         )}
                     </div>
@@ -616,20 +732,8 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
 
                 {/* Selling price + Add to Cart */}
                 {allFiltersSet && availSkus && availSkus.skus.length > 0 && remainingUnits > 0 && (
-                    <div className="product-row">
-                        <label>Selling Price (per unit) :</label>
-                        <div className="field-col">
-                            <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                placeholder="0.00"
-                                value={sellingPrice}
-                                onChange={(e) => setSellingPrice(e.target.value)}
-                            />
-                            {productErrors.sellingPrice && <span className="order-field-error">{productErrors.sellingPrice}</span>}
-                        </div>
-
+                    <div className="product-row" style={{justifyContent:"flex-end"}}>
+                        {productErrors.sellingPrice && <span className="order-field-error" style={{marginRight:12}}>{productErrors.sellingPrice}</span>}
                         <div className="cart-button-row" style={{ marginTop: 0 }}>
                             <button className="add-cart-btn" onClick={addToCart}>
                                 Add To Cart {totalUnitsSelected > 0 && `(${totalUnitsSelected} unit${totalUnitsSelected !== 1 ? "s" : ""})`}
@@ -730,6 +834,18 @@ function PlaceOrder({ isActive, closeCurrentTab, registerCloseGuard, cart, setCa
                         value={deliveryCharge}
                         onChange={(e) => setDeliveryCharge(e.target.value)}
                     />
+                </div>
+                <div className="delivery-charge-field">
+                    <label>Terms of Payment (Days) * :</label>
+                    <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="30"
+                        value={paymentTerms}
+                        onChange={(e) => setPaymentTerms(e.target.value)}
+                    />
+                    {fieldErrors.paymentTerms && <span className="order-field-error">{fieldErrors.paymentTerms}</span>}
                 </div>
                 <button className="cancel-btn" onClick={handleCancelClick}>Cancel</button>
                 <button className="submit-btn" onClick={handleSubmitClick}>Submit</button>
