@@ -360,7 +360,7 @@ function InventoryRetrieval({ onEditRecord, onAddRecord, onOrderWithProduct, onV
                                                                     return (    
                                                                         <tr key={r.sku_id}>
                                                                             <td>
-                                                                                {isNew && <span className="summary-new-badge-subtable">●</span>}
+                                                                                {isNew && <span className="summary-new-badge-subtable"></span>}
                                                                                 {r.sku_type}
                                                                             </td>
                                                                             <td>{r.sku_subtype}</td><td>{r.sku_dim}</td>

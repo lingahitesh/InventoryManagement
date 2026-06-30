@@ -2,9 +2,7 @@
     padding: 24px 28px;
     max-width: 1400px;
     margin: 0 auto;
-    animation: dashFadeIn 0.4s ease;
 }
-@keyframes dashFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ── Greeting ── */
 .dash-greeting {
@@ -236,4 +234,23 @@
 @media (max-width: 480px) {
     .dash-kpi-grid { grid-template-columns: 1fr; }
     .dash-quick-actions { grid-template-columns: 1fr; }
+}
+
+
+/* ── Two-col chart row ── */
+.dash-two-col {
+    
+}
+
+.dash-two-col .dash-card {
+    min-width: 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+    .dash-two-col { flex-direction: column; }
 }

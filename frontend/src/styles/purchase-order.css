@@ -1,5 +1,5 @@
-.po-container { padding: 0; animation: poFadeIn 0.4s ease; }
-@keyframes poFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.po-container { padding: 0; animation: poFadeIn 250ms ease both; }
+@keyframes poFadeIn { from { opacity: 0.8; } to { opacity: 1; } }
 
 .po-header-row {
     display: flex; align-items: center; justify-content: space-between;

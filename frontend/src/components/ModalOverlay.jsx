@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import "../styles/modal-overlay.css";
 
 /**
@@ -30,7 +31,7 @@ function ModalOverlay({ open, onClose, title, children })
 
     if (!open && !closing) return null;
 
-    return (
+    return createPortal(
         <div className={`modal-overlay-backdrop${closing ? " closing" : ""}`} onClick={handleClose}>
             <div className="modal-overlay-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-overlay-header">
@@ -41,7 +42,8 @@ function ModalOverlay({ open, onClose, title, children })
                     {children}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 

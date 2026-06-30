@@ -29,12 +29,32 @@ select {
 /* ═══════════════════════════════════════════════════
    FLOATING NAVIGATION BAR
    ═══════════════════════════════════════════════════ */
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 12px 0;
+    transition: transform 280ms ease-in-out;
+    will-change: transform;
+}
+
+.app-header-hidden {
+    transform: translateY(-100%);
+    pointer-events: none;
+}
+
+.app-header-spacer {
+    height: 80px;
+}
+
 .tab-bar {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 8px 16px;
-    margin: 12px auto;
+    margin: 0 auto;
     max-width: fit-content;
     background: rgba(26, 26, 46, 0.92);
     backdrop-filter: blur(16px);
@@ -44,21 +64,12 @@ select {
         0 4px 24px rgba(0, 0, 0, 0.12),
         0 1px 4px rgba(0, 0, 0, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    position: sticky;
-    top: 12px;
-    z-index: 100;
     gap: 2px;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 .tab-bar::-webkit-scrollbar { display: none; }
-.tab-bar-hidden {
-    transform: translateY(-80px);
-    opacity: 0;
-    pointer-events: none;
-}
 
 .tab {
     padding: 10px 20px;
@@ -134,11 +145,6 @@ select {
     padding: 20px 28px 40px;
     max-width: 100%;
     overflow-x: hidden;
-    animation: contentFadeIn 0.4s ease;
-}
-@keyframes contentFadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -162,9 +168,10 @@ button {
 
 /* Subtle page transitions */
 .content > div {
-    animation: pageFade 0.25s ease;
+    animation: pageFadeIn 250ms ease both;
 }
-@keyframes pageFade {
+
+@keyframes pageFadeIn {
     from { opacity: 0.8; }
     to { opacity: 1; }
 }
@@ -256,11 +263,12 @@ th, td {
     top: 14px;
     right: 28px;
     z-index: 101;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    transition: transform 280ms ease-in-out;
+    will-change: transform;
 }
-.profile-btn-wrap.tab-bar-hidden {
-    transform: translateY(-80px);
-    opacity: 0;
+
+.profile-btn-wrap-hidden {
+    transform: translateY(calc(-100% - 14px));
     pointer-events: none;
 }
 .profile-btn {

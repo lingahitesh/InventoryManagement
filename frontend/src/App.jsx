@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 
 import "./App.css";
 
@@ -14,6 +14,7 @@ import Payment      from "./pages/Payment";
 import Profile      from "./pages/Profile";
 import ModalOverlay from "./components/ModalOverlay";
 import { getInventory } from "./api";
+import useAutoHideHeader from "./hooks/useAutoHideHeader";
 
 function App()
 {
@@ -75,33 +76,8 @@ function App()
     const closeGuards = useRef({});
 
     // ── Smart Collapsible Header ─────────────────────────────
-    const [navHidden, setNavHidden] = useState(false);
-    const lastScrollY = useRef(0);
-    const ticking = useRef(false);
-
-    useEffect(() => {
-        const onScroll = () => {
-            if (ticking.current) return;
-            ticking.current = true;
-            requestAnimationFrame(() => {
-                const currentY = window.scrollY;
-                const delta = currentY - lastScrollY.current;
-
-                if (delta > 5 && currentY > 50) {
-                    // Scrolling down past threshold — hide
-                    setNavHidden(true);
-                } else if (delta < -5) {
-                    // Scrolling up by at least 5px — show
-                    setNavHidden(false);
-                }
-
-                lastScrollY.current = currentY;
-                ticking.current = false;
-            });
-        };
-        window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
-    }, []);
+    const contentRef = useRef(null);
+    const { hidden: navHidden, scrollToTop } = useAutoHideHeader(contentRef, isAuthenticated);
 
     const registerCloseGuard = (tabId, fn) => { closeGuards.current[tabId] = fn; };
 
@@ -146,13 +122,13 @@ function App()
     };
 
     const closeCurrentTab = () => doCloseTab(activeTab);
-    const switchTab = (id) => { setActiveTab(id); requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" })); };
+    const switchTab = (id) => { setActiveTab(id); requestAnimationFrame(scrollToTop); };
 
     const openTab = (id, title) =>
     {
         if (!tabs.find(t => t.id === id)) setTabs(prev => [...prev, { id, title }]);
         setActiveTab(id);
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+        requestAnimationFrame(scrollToTop);
     };
 
     const goBack = () =>
@@ -205,28 +181,33 @@ function App()
     return (
         <div className="app">
 
-            <div className={`tab-bar${navHidden ? " tab-bar-hidden" : ""}`}>
-                <div className={activeTab === "home" ? "tab active" : "tab"} onClick={() => switchTab("home")}>Home</div>
-                {visibleNavTabs.map(nav => (
-                    <div key={nav.id} className={activeTab === nav.id ? "tab active" : "tab"}
-                        onClick={() => openTab(nav.id, nav.title)}>{nav.title}</div>
-                ))}
-                {tabs.filter(t => t.id !== "home" && !NAV_TABS.find(n => n.id === t.id)).map(tab => (
-                    <div key={tab.id} className={activeTab === tab.id ? "tab active" : "tab"} onClick={() => switchTab(tab.id)}>
-                        {tab.title}
-                        <span className="close" onClick={(e) => { e.stopPropagation(); requestCloseTab(tab.id); }}>×</span>
-                    </div>
-                ))}
+            <div className={`app-header${navHidden ? " app-header-hidden" : ""}`}>
+                <div className="tab-bar">
+                    <div className={activeTab === "home" ? "tab active" : "tab"} onClick={() => switchTab("home")}>Home</div>
+                    {visibleNavTabs.map(nav => (
+                        <div key={nav.id} className={activeTab === nav.id ? "tab active" : "tab"}
+                            onClick={() => openTab(nav.id, nav.title)}>{nav.title}</div>
+                    ))}
+                    {tabs.filter(t => t.id !== "home" && !NAV_TABS.find(n => n.id === t.id)).map(tab => (
+                        <div key={tab.id} className={activeTab === tab.id ? "tab active" : "tab"} onClick={() => switchTab(tab.id)}>
+                            {tab.title}
+                            <span className="close" onClick={(e) => { e.stopPropagation(); requestCloseTab(tab.id); }}>×</span>
+                        </div>
+                    ))}
+                </div>
+
             </div>
 
-            {/* Profile button */}
-            <div className={`profile-btn-wrap${navHidden ? " tab-bar-hidden" : ""}`}>
+            {/* Profile button follows the same visibility state as the navigation. */}
+            <div className={`profile-btn-wrap${navHidden ? " profile-btn-wrap-hidden" : ""}`}>
                 <button className="profile-btn" onClick={() => setShowProfileModal(true)}>
                     {currentUser ? currentUser.fname[0] + (currentUser.lname?.[0] || "") : "?"}
                 </button>
             </div>
 
-            <div className="content">
+            <div className="app-header-spacer" aria-hidden="true" />
+
+            <div className="content" ref={contentRef}>
 
                 {/* ── Home ── */}
                 <div style={{ display: activeTab === "home" ? "block" : "none" }}>

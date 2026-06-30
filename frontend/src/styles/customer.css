@@ -2,7 +2,6 @@
     padding: 0;
     max-width: 100%;
     overflow-x: hidden;
-    animation: revealFadeIn 0.4s ease;
 }
 
 .customer-container h1 {
@@ -428,13 +427,34 @@
     box-shadow: 0 4px 20px rgba(26, 26, 46, 0.35);
     display: grid;
     place-items: center;
-    padding-bottom: 3px;
-    transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+    padding: 0;
+    font-size: 0;
+    line-height: 0;
+    transition: background 0.3s, box-shadow 0.3s;
     z-index: 200;
-    animation: fabFadeIn 0.5s ease 0.3s both;
+    animation: fabFadeIn 160ms ease-out both;
 }
 @keyframes fabFadeIn { from { opacity: 0; } to { opacity: 1; } }
-.customer-fab:hover { background: #3b82f6; box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4); transform: rotate(90deg); }
+
+.customer-fab::before,
+.customer-fab::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transform-origin: center;
+    transition: transform 0.3s ease;
+}
+
+.customer-fab::before { transform: translate(-50%, -50%); }
+.customer-fab::after { transform: translate(-50%, -50%) rotate(90deg); }
+.customer-fab:hover { background: #3b82f6; box-shadow: 0 8px 28px rgba(59, 130, 246, 0.4); }
+.customer-fab:hover::before { transform: translate(-50%, -50%) rotate(90deg); }
+.customer-fab:hover::after { transform: translate(-50%, -50%) rotate(180deg); }
 .customer-fab:active { background: #2563eb; }
 
 /* ── Toolbar ── */

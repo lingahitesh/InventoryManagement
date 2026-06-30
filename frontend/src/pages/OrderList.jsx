@@ -481,15 +481,24 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete, privile
     const hasSales = privileges?.view !== false;
     const hasPO = privileges?._po?.view !== false;
     const [subTab, setSubTab] = useState(hasSales ? "sales" : "purchase");
+    const [pendingPoCreate, setPendingPoCreate] = useState(false);
+    const lastPoCreateTrigger = useRef(poCreateTrigger);
 
     // Switch to PO tab and open form when triggered from quick actions
     useEffect(() => {
-        if (poCreateTrigger > 0) setSubTab("purchase");
+        if (poCreateTrigger > lastPoCreateTrigger.current) {
+            lastPoCreateTrigger.current = poCreateTrigger;
+            setPendingPoCreate(true);
+            setSubTab("purchase");
+        }
     }, [poCreateTrigger]);
 
     // Switch to Sales tab when triggered
     useEffect(() => {
-        if (salesSubTabTrigger > 0) setSubTab("sales");
+        if (salesSubTabTrigger > 0) {
+            setPendingPoCreate(false);
+            setSubTab("sales");
+        }
     }, [salesSubTabTrigger]);
 
     return (
@@ -497,9 +506,9 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete, privile
             {hasSales && hasPO && (
                 <div className="ol-subtab-bar">
                     <button className={`ol-subtab-btn${subTab === "sales" ? " active" : ""}`}
-                        onClick={() => setSubTab("sales")}>Sales Orders</button>
+                        onClick={() => { setPendingPoCreate(false); setSubTab("sales"); }}>Sales Orders</button>
                     <button className={`ol-subtab-btn${subTab === "purchase" ? " active" : ""}`}
-                        onClick={() => setSubTab("purchase")}>Purchase Orders</button>
+                        onClick={() => { setPendingPoCreate(false); setSubTab("purchase"); }}>Purchase Orders</button>
                 </div>
             )}
             {subTab === "sales" && hasSales ? (
@@ -511,7 +520,8 @@ function OrderList({ onEditOrder, onNewOrder, refreshKey, onOrderDelete, privile
                     privileges={privileges}
                 />
             ) : hasPO ? (
-                <PurchaseOrder privileges={privileges._po} createTrigger={poCreateTrigger} />
+                <PurchaseOrder privileges={privileges._po}
+                    createTrigger={pendingPoCreate ? poCreateTrigger : 0} />
             ) : null}
         </div>
     );
