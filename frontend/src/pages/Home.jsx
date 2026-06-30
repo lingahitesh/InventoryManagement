@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../styles/home.css";
 import {
     TrendingUp, TrendingDown, Package, ShoppingCart, Truck, DollarSign,
@@ -98,6 +98,25 @@ function formatSignedPct(pct) {
 
 function DumbbellChart({ data }) {
     const [hovered, setHovered] = useState(null);
+    const containerRef = useRef(null);
+    const [containerW, setContainerW] = useState(560); // sensible default before first measurement
+
+    // Measure the actual rendered width so every x position can be a plain
+    // number (px) instead of a CSS calc() string. SVG <line> x1/x2 and other
+    // non-shape attributes don't support calc() the way <rect>/<circle> do,
+    // which is what was pushing the gridlines, track lines and margin labels
+    // to the left edge instead of where the data actually placed them.
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || typeof ResizeObserver === "undefined") return;
+        const ro = new ResizeObserver((entries) => {
+            const w = entries[0]?.contentRect?.width;
+            if (w) setContainerW(w);
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
     if (!data.length) return (
         <div className="dash-card" style={{flex:1}}>
             <h3 className="dash-card-title"><Activity size={16} /> Avg Selling vs Cost Price</h3>
@@ -108,9 +127,10 @@ function DumbbellChart({ data }) {
     const rowH = 44;
     const leftW = 68;
     const rightW = 90;
-    const chartW = "100%";
     const topPad = 20;
-    const barTrackPct = 55; // % of full SVG width used as the bar track (matches bar/dot math below)
+    const minChartW = 320;
+    const chartW = Math.max(containerW, minChartW);
+    const trackW = Math.max(chartW - leftW - rightW, 40);
 
     // Reserve real, fixed space below the rows for: gap → axis line → tick labels → legend
     const axisY = data.length * rowH + topPad + 10;
@@ -119,13 +139,13 @@ function DumbbellChart({ data }) {
     const height = legendY + 10;
 
     const ticks = niceTicks(maxVal);
-    const xFor = (v) => `calc(${leftW}px + ${(v / maxVal) * barTrackPct}%)`;
+    const xFor = (v) => leftW + (v / maxVal) * trackW; // plain px number — no calc()
 
     return (
         <div className="dash-card" style={{flex:1}}>
             <h3 className="dash-card-title"><Activity size={16} /> Avg Selling vs Cost Price</h3>
-            <div style={{position:"relative", overflowX:"auto"}}>
-                <svg width={chartW} height={height} style={{display:"block", minWidth:320}}>
+            <div ref={containerRef} style={{position:"relative", overflowX:"auto"}}>
+                <svg width={chartW} height={height} style={{display:"block", minWidth:minChartW}}>
                     {/* Vertical gridlines + x-axis price ticks (drawn first, behind the data) */}
                     {ticks.map((t, ti) => (
                         <g key={ti}>
@@ -140,23 +160,24 @@ function DumbbellChart({ data }) {
                         const profit = d.avg_sp - d.avg_cp;
                         const profitPct = d.avg_cp > 0 ? (profit / d.avg_cp) * 100 : null;
                         // Label sits past whichever bar (SP or CP) actually extends furthest —
-                        // previously this only looked at avg_sp, so a higher cost price would
-                        // draw a longer CP bar that ran straight through the label text.
-                        const labelX = `calc(${xFor(Math.max(d.avg_sp, d.avg_cp))} + 12px)`;
+                        // computed in real px now, so it always lands right after the longer bar
+                        // instead of collapsing back toward the y-axis.
+                        const barEnd = xFor(Math.max(d.avg_sp, d.avg_cp));
+                        const labelX = barEnd + 12;
                         const isHov = hovered === i;
                         return (
                             <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}
                                style={{cursor:"pointer"}}>
                                 {/* Row bg on hover */}
-                                {isHov && <rect x={0} y={y - 16} width="100%" height={rowH - 4} rx={6} fill="#f0f4ff" />}
+                                {isHov && <rect x={0} y={y - 16} width={chartW} height={rowH - 4} rx={6} fill="#f0f4ff" />}
                                 {/* Label */}
                                 <text x={leftW - 6} y={y + 4} textAnchor="end" fontSize={11} fill={isHov ? "#1a1a2e" : "#555"} fontWeight={isHov ? 600 : 400}>{d.type}</text>
                                 {/* Track line */}
-                                <line x1={leftW} y1={y} x2={`calc(100% - ${rightW}px)`} y2={y} stroke="#e8e8e8" strokeWidth={1} />
+                                <line x1={leftW} y1={y} x2={leftW + trackW} y2={y} stroke="#e8e8e8" strokeWidth={1} />
                                 {/* CP bar — thin neutral */}
-                                <rect x={leftW} y={y - 4} width={`${(d.avg_cp / maxVal) * barTrackPct}%`} height={8} rx={4} fill="#cbd5e1" opacity={0.8} />
+                                <rect x={leftW} y={y - 4} width={(d.avg_cp / maxVal) * trackW} height={8} rx={4} fill="#cbd5e1" opacity={0.8} />
                                 {/* SP bar — thicker accent */}
-                                <rect x={leftW} y={y - 7} width={`${(d.avg_sp / maxVal) * barTrackPct}%`} height={14} rx={4} fill={isHov ? "#1d4ed8" : "#3b82f6"} opacity={0.9}
+                                <rect x={leftW} y={y - 7} width={(d.avg_sp / maxVal) * trackW} height={14} rx={4} fill={isHov ? "#1d4ed8" : "#3b82f6"} opacity={0.9}
                                     style={{transition:"fill 0.2s"}} />
                                 {/* CP dot */}
                                 <circle cx={xFor(d.avg_cp)} cy={y} r={isHov ? 6 : 5} fill="#94a3b8" stroke="white" strokeWidth={1.5}
@@ -175,7 +196,7 @@ function DumbbellChart({ data }) {
                         );
                     })}
                     {/* X axis baseline */}
-                    <line x1={leftW} y1={axisY} x2={`calc(100% - ${rightW}px)`} y2={axisY} stroke="#d8d8df" strokeWidth={1} />
+                    <line x1={leftW} y1={axisY} x2={leftW + trackW} y2={axisY} stroke="#d8d8df" strokeWidth={1} />
                     {/* Legend */}
                     <circle cx={leftW + 8} cy={legendY} r={4} fill="#3b82f6" />
                     <text x={leftW + 16} y={legendY + 4} fontSize={10} fill="#555">Sell Price</text>
