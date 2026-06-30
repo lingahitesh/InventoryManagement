@@ -77,6 +77,25 @@ function TodoItem({ item, onToggle }) {
    ═══════════════════════════════════════════════════════════════ */
 const PIE_COLORS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16","#f97316","#6366f1","#14b8a6","#e11d48"];
 
+// Picks ~5 evenly spaced, human-friendly axis ticks between 0 and max.
+function niceTicks(max, count = 5) {
+    if (!(max > 0)) return [0];
+    const rawStep = max / (count - 1);
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const norm = rawStep / mag;
+    const niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+    const step = niceNorm * mag;
+    const ticks = [];
+    for (let v = 0; v <= max + step * 0.5; v += step) ticks.push(Math.round(v));
+    return ticks;
+}
+
+// "+12.3%" / "-12.3%" / "—" — never the broken "+-12.3%"
+function formatSignedPct(pct) {
+    if (pct === null) return "—";
+    return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
+}
+
 function DumbbellChart({ data }) {
     const [hovered, setHovered] = useState(null);
     if (!data.length) return (
@@ -90,24 +109,40 @@ function DumbbellChart({ data }) {
     const leftW = 68;
     const rightW = 90;
     const chartW = "100%";
-    const height = data.length * rowH + 40;
+    const topPad = 20;
+    const barTrackPct = 55; // % of full SVG width used as the bar track (matches bar/dot math below)
+
+    // Reserve real, fixed space below the rows for: gap → axis line → tick labels → legend
+    const axisY = data.length * rowH + topPad + 10;
+    const tickLabelY = axisY + 14;
+    const legendY = axisY + 36;
+    const height = legendY + 10;
+
+    const ticks = niceTicks(maxVal);
+    const xFor = (v) => `calc(${leftW}px + ${(v / maxVal) * barTrackPct}%)`;
 
     return (
         <div className="dash-card" style={{flex:1}}>
             <h3 className="dash-card-title"><Activity size={16} /> Avg Selling vs Cost Price</h3>
             <div style={{position:"relative", overflowX:"auto"}}>
                 <svg width={chartW} height={height} style={{display:"block", minWidth:320}}>
+                    {/* Vertical gridlines + x-axis price ticks (drawn first, behind the data) */}
+                    {ticks.map((t, ti) => (
+                        <g key={ti}>
+                            <line x1={xFor(t)} y1={topPad - 12} x2={xFor(t)} y2={axisY} stroke="#f1f1f4" strokeWidth={1} />
+                            <line x1={xFor(t)} y1={axisY} x2={xFor(t)} y2={axisY + 4} stroke="#bbb" strokeWidth={1} />
+                            <text x={xFor(t)} y={tickLabelY} textAnchor="middle" fontSize={9} fill="#888">₹{t}</text>
+                        </g>
+                    ))}
+
                     {data.map((d, i) => {
-                        const y = i * rowH + 20;
-                        const pct = maxVal > 0 ? (pct => pct) : 1;
-                        const toX = v => leftW + ((v / maxVal) * (100 - leftW / 4 - rightW / 4));
-                        // We'll compute % width dynamically — use % of available
-                        const avail = 360; // approx fallback, SVG will stretch
-                        const barX=(d.avg_sp/maxVal)*avail;
+                        const y = i * rowH + topPad;
                         const profit = d.avg_sp - d.avg_cp;
-                        const profitPct = d.avg_cp > 0 ? ((profit / d.avg_cp) * 100).toFixed(1) : "—";
-                        const barPercent = (d.avg_sp / maxVal) * 55;
-                        const labelX=leftW+barX+15;
+                        const profitPct = d.avg_cp > 0 ? (profit / d.avg_cp) * 100 : null;
+                        // Label sits past whichever bar (SP or CP) actually extends furthest —
+                        // previously this only looked at avg_sp, so a higher cost price would
+                        // draw a longer CP bar that ran straight through the label text.
+                        const labelX = `calc(${xFor(Math.max(d.avg_sp, d.avg_cp))} + 12px)`;
                         const isHov = hovered === i;
                         return (
                             <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}
@@ -119,38 +154,38 @@ function DumbbellChart({ data }) {
                                 {/* Track line */}
                                 <line x1={leftW} y1={y} x2={`calc(100% - ${rightW}px)`} y2={y} stroke="#e8e8e8" strokeWidth={1} />
                                 {/* CP bar — thin neutral */}
-                                <rect x={leftW} y={y - 4} width={`${(d.avg_cp / maxVal) * 55}%`} height={8} rx={4} fill="#cbd5e1" opacity={0.8} />
+                                <rect x={leftW} y={y - 4} width={`${(d.avg_cp / maxVal) * barTrackPct}%`} height={8} rx={4} fill="#cbd5e1" opacity={0.8} />
                                 {/* SP bar — thicker accent */}
-                                <rect x={leftW} y={y - 7} width={`${(d.avg_sp / maxVal) * 55}%`} height={14} rx={4} fill={isHov ? "#1d4ed8" : "#3b82f6"} opacity={0.9}
+                                <rect x={leftW} y={y - 7} width={`${(d.avg_sp / maxVal) * barTrackPct}%`} height={14} rx={4} fill={isHov ? "#1d4ed8" : "#3b82f6"} opacity={0.9}
                                     style={{transition:"fill 0.2s"}} />
                                 {/* CP dot */}
-                                <circle cx={`calc(${leftW}px + ${(d.avg_cp / maxVal) * 55}%)`} cy={y} r={isHov ? 6 : 5} fill="#94a3b8" stroke="white" strokeWidth={1.5}
+                                <circle cx={xFor(d.avg_cp)} cy={y} r={isHov ? 6 : 5} fill="#94a3b8" stroke="white" strokeWidth={1.5}
                                     style={{transition:"r 0.2s"}} />
                                 {/* SP dot */}
-                                <circle cx={`calc(${leftW}px + ${(d.avg_sp / maxVal) * 55}%)`} cy={y} r={isHov ? 7 : 6} fill={isHov ? "#1d4ed8" : "#3b82f6"} stroke="white" strokeWidth={2}
+                                <circle cx={xFor(d.avg_sp)} cy={y} r={isHov ? 7 : 6} fill={isHov ? "#1d4ed8" : "#3b82f6"} stroke="white" strokeWidth={2}
                                     style={{transition:"r 0.2s, fill 0.2s"}} />
                                 {/* Profit badge */}
-                                <text x={labelX} y={y - 5} fontSize={10} fill="#10b981" fontWeight={700}>
-                                    +{profitPct}%
+                                <text x={labelX} y={y - 5} fontSize={10} fill={profitPct === null || profitPct >= 0 ? "#10b981" : "#ef4444"} fontWeight={700}>
+                                    {formatSignedPct(profitPct)}
                                 </text>
                                 <text x={labelX} y={y + 9} fontSize={10} fill="#555">
-                                    ₹{profit.toFixed(0)} margin
+                                    {profit >= 0 ? `₹${profit.toFixed(0)}` : `-₹${Math.abs(profit).toFixed(0)}`} margin
                                 </text>
                             </g>
                         );
                     })}
-                    {/* X axis line */}
-                    <line x1={leftW} y1={height - 10} x2={`calc(100% - ${rightW}px)`} y2={height - 10} stroke="#e0e0e0" strokeWidth={1} />
+                    {/* X axis baseline */}
+                    <line x1={leftW} y1={axisY} x2={`calc(100% - ${rightW}px)`} y2={axisY} stroke="#d8d8df" strokeWidth={1} />
                     {/* Legend */}
-                    <circle cx={leftW + 8} cy={height - 6} r={4} fill="#3b82f6" />
-                    <text x={leftW + 16} y={height - 2} fontSize={10} fill="#555">Sell Price</text>
-                    <circle cx={leftW + 80} cy={height - 6} r={4} fill="#94a3b8" />
-                    <text x={leftW + 88} y={height - 2} fontSize={10} fill="#555">Cost Price</text>
+                    <circle cx={leftW + 8} cy={legendY} r={4} fill="#3b82f6" />
+                    <text x={leftW + 16} y={legendY + 4} fontSize={10} fill="#555">Sell Price</text>
+                    <circle cx={leftW + 80} cy={legendY} r={4} fill="#94a3b8" />
+                    <text x={leftW + 88} y={legendY + 4} fontSize={10} fill="#555">Cost Price</text>
                 </svg>
                 {/* Hover tooltip */}
                 {hovered !== null && data[hovered] && (
                     <div style={{
-                        position:"absolute", top:hovered * 44 + 4, left:"62%",
+                        position:"absolute", top:hovered * rowH + topPad - 16, left:"62%",
                         background:"#1a1a2e", color:"white", padding:"8px 12px", borderRadius:8,
                         fontSize:12, lineHeight:1.6, pointerEvents:"none", zIndex:10,
                         boxShadow:"0 4px 16px rgba(0,0,0,0.25)",
@@ -161,7 +196,7 @@ function DumbbellChart({ data }) {
                         <div style={{color:"#cbd5e1"}}>Cost: <strong>₹{data[hovered].avg_cp.toFixed(2)}</strong></div>
                         <div style={{color:"#6ee7b7", marginTop:2}}>
                             Margin: ₹{(data[hovered].avg_sp - data[hovered].avg_cp).toFixed(2)}
-                            {" "}({data[hovered].avg_cp > 0 ? (((data[hovered].avg_sp - data[hovered].avg_cp) / data[hovered].avg_cp) * 100).toFixed(1) : "—"}%)
+                            {" "}({formatSignedPct(data[hovered].avg_cp > 0 ? ((data[hovered].avg_sp - data[hovered].avg_cp) / data[hovered].avg_cp) * 100 : null)})
                         </div>
                     </div>
                 )}
@@ -236,7 +271,7 @@ function ExplodingDonut({ data }) {
                                onMouseEnter={() => setActiveIdx(i)}>
                                 <path
                                     d={arcPath(sl, active)}
-                                    pointerEvents="visibleStroke"
+                                    pointerEvents="visiblePainted"
                                     fill={color}
                                     opacity={activeIdx !== null && !active ? 0.65 : 1}
                                     stroke="white" strokeWidth={active ? 2 : 1.5}
