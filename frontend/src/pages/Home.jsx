@@ -78,7 +78,7 @@ function TodoItem({ item, onToggle }) {
 const PIE_COLORS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16","#f97316","#6366f1","#14b8a6","#e11d48"];
 
 // Picks ~5 evenly spaced, human-friendly axis ticks between 0 and max.
-function niceTicks(max, count = 5) {
+function niceTicks(max, count = 8) {
     if (!(max > 0)) return [0];
     const rawStep = max / (count - 1);
     const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
@@ -99,7 +99,7 @@ function formatSignedPct(pct) {
 function DumbbellChart({ data }) {
     const [hovered, setHovered] = useState(null);
     const containerRef = useRef(null);
-    const [containerW, setContainerW] = useState(560); // sensible default before first measurement
+    const [containerW, setContainerW] = useState(710); // sensible default before first measurement
 
     // Measure the actual rendered width so every x position can be a plain
     // number (px) instead of a CSS calc() string. SVG <line> x1/x2 and other
@@ -123,17 +123,17 @@ function DumbbellChart({ data }) {
             <div style={{padding:40, color:"#999", textAlign:"center", fontSize:13}}>No data yet</div>
         </div>
     );
-    const maxVal = Math.max(...data.map(d => Math.max(d.avg_sp, d.avg_cp))) * 1.1;
+    const maxVal = Math.max(...data.map(d => Math.max(d.avg_sp, d.avg_cp))) * 1.2;
     const rowH = 44;
     const leftW = 68;
-    const rightW = 90;
+    const rightW = 20;
     const topPad = 20;
-    const minChartW = 320;
+    const minChartW = 300;
     const chartW = Math.max(containerW, minChartW);
     const trackW = Math.max(chartW - leftW - rightW, 40);
 
     // Reserve real, fixed space below the rows for: gap → axis line → tick labels → legend
-    const axisY = data.length * rowH + topPad + 10;
+    const axisY = data.length * rowH + topPad;
     const tickLabelY = axisY + 14;
     const legendY = axisY + 36;
     const height = legendY + 10;
@@ -149,7 +149,7 @@ function DumbbellChart({ data }) {
                     {/* Vertical gridlines + x-axis price ticks (drawn first, behind the data) */}
                     {ticks.map((t, ti) => (
                         <g key={ti}>
-                            <line x1={xFor(t)} y1={topPad - 12} x2={xFor(t)} y2={axisY} stroke="#f1f1f4" strokeWidth={1} />
+                            <line x1={xFor(t)} y1={topPad - 12} x2={xFor(t)} y2={axisY} stroke="#f1f1f4" strokeWidth={2} />
                             <line x1={xFor(t)} y1={axisY} x2={xFor(t)} y2={axisY + 4} stroke="#bbb" strokeWidth={1} />
                             <text x={xFor(t)} y={tickLabelY} textAnchor="middle" fontSize={9} fill="#888">₹{t}</text>
                         </g>
@@ -173,7 +173,7 @@ function DumbbellChart({ data }) {
                                 {/* Label */}
                                 <text x={leftW - 6} y={y + 4} textAnchor="end" fontSize={11} fill={isHov ? "#1a1a2e" : "#555"} fontWeight={isHov ? 600 : 400}>{d.type}</text>
                                 {/* Track line */}
-                                <line x1={leftW} y1={y} x2={leftW + trackW} y2={y} stroke="#e8e8e8" strokeWidth={1} />
+                                <line x1={leftW} y1={y} x2={leftW + trackW} y2={y} stroke="#e8e8e8" strokeWidth={2} />
                                 {/* CP bar — thin neutral */}
                                 <rect x={leftW} y={y - 4} width={(d.avg_cp / maxVal) * trackW} height={8} rx={4} fill="#cbd5e1" opacity={0.8} />
                                 {/* SP bar — thicker accent */}
@@ -238,7 +238,7 @@ function ExplodingDonut({ data }) {
         </div>
     );
     const total = data.reduce((s, d) => s + d.value, 0);
-    const cx = 130, cy = 130, R = 100, r = 55, EXPLODE = 6;
+    const cx = 130, cy = 130, R = 140, r = 55, EXPLODE = 6;
     const LABEL_MIN_PCT = 4;
 
     // Compute arcs
@@ -317,7 +317,7 @@ function ExplodingDonut({ data }) {
                 {/* Hover tooltip */}
                 {activeIdx !== null && slices[activeIdx] && (
                     <div style={{
-                        position:"absolute", top:"50%", left:Math.cos(slices[activeIdx].mid) > 0?"78%":"-4%",
+                        position:"absolute", top:"50%", left:Math.cos(slices[activeIdx].mid) > 0?"80%":"-6%",
                         transform:Math.cos(slices[activeIdx].mid) > 0?"translateY(-50%)":"translate(-36%,-50%)",
                         background:"#1a1a2e", color:"white", padding:"10px 14px",
                         borderRadius:10, fontSize:12, lineHeight:1.7,
